@@ -5,10 +5,11 @@ import { useUserStore } from "../../../lib/userStore";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
+import { toast } from "react-toastify";
 
 const ChatList = () => {
   const [chats, setChats] = useState([]);
-  const [addMode, setAddMode] = useState(false);
+  const [addMode, setAddMode] = useState(false);  // AddMode state to control AddUser visibility
   const [input, setInput] = useState("");
 
   const { currentUser } = useUserStore();
@@ -41,22 +42,16 @@ const ChatList = () => {
   }, [currentUser.id]);
 
   const handleSelect = async (chat) => {
-    const userChats = chats.map((item) => {
+    const updatedChats = chats.map((item) => {
       const { user, ...rest } = item;
-      return rest;
+      return { ...rest, isSeen: item.chatId === chat.chatId ? true : item.isSeen };
     });
-
-    const chatIndex = userChats.findIndex(
-      (item) => item.chatId === chat.chatId
-    );
-
-    userChats[chatIndex].isSeen = true;
 
     const userChatsRef = doc(db, "userchats", currentUser.id);
 
     try {
       await updateDoc(userChatsRef, {
-        chats: userChats,
+        chats: updatedChats,
       });
       changeChat(chat.chatId, chat.user);
     } catch (err) {
@@ -88,12 +83,9 @@ const ChatList = () => {
       </div>
       {filteredChats.map((chat) => (
         <div
-          className="item"
+          className={`item ${chat.chatId === chatId ? 'selected' : ''}`}
           key={chat.chatId}
           onClick={() => handleSelect(chat)}
-          style={{
-            backgroundColor: chat?.isSeen ? "transparent" : "#5183fe",
-          }}
         >
           <img
             src={
@@ -114,7 +106,7 @@ const ChatList = () => {
         </div>
       ))}
 
-      {addMode && <AddUser />}
+      {addMode && <AddUser setAddMode={setAddMode} />} {/* Pass setAddMode */}
     </div>
   );
 };

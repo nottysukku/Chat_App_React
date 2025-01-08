@@ -8,6 +8,7 @@
 
 body {
   overflow: hidden;
+  
   background-image: url("/bg.jpg");
   background-repeat: no-repeat;
   display: flex;
@@ -19,6 +20,7 @@ body {
 }
 
 .container {
+  overflow: hidden;
   width: 80vw;
   height: 90vh;
   background-color: rgba(17, 40, 19, 0.25);

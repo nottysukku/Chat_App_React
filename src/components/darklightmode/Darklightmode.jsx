@@ -16,6 +16,10 @@ export default function Darklightmode() {
      element.style.backgroundColor = toggleDarkMode ? "rgba(17, 40, 19, 0.25)" : "rgba(17, 40, 19, 0.01)";
    });
    document.querySelector("#eh2").style.color = toggleDarkMode ? "white" : "black";
+  const statusUser1 = document.getElementById("statususer1");
+  if (statusUser1) {
+    statusUser1.style.color = toggleDarkMode ? "white" : "black";
+  }
   };
 
  

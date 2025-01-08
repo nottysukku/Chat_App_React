@@ -1,20 +1,46 @@
-.userInfo .icons {
-  display: flex;
-  gap: 15px;
+.userInfo .status-section {
+  margin-top: 10px;
+  text-align: center;
 }
 
-.userInfo .icon-link img {
-  width: 32px;
-  height: 32px;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.userInfo .icon-link img:hover {
-  transform: scale(1.1);
-  opacity: 0.8;
+.userInfo .status-display {
+  font-size: 1rem;
+  color: #333;
   cursor: pointer;
 }
 
+.userInfo .status-edit input {
+  font-size: 1rem;
+  padding: 5px 10px;
+  width: 100%;
+}
+#closebut {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  font-size: 1.2rem;
+  color: #ff0000;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+#closbut:hover {
+  color: #cc0000;
+  opacity: 0.8;
+}
+.userInfo .status-edit button {
+  padding: 5px 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+.userInfo .save-status-btn {
+  background-color: #4CAF50;
+}
 
 .userInfo {
   padding: 20px;
@@ -40,9 +66,87 @@
     gap: 20px;
 
     img {
-      width: 20px;
-      height: 20px;
+      width: 20px; /* Reduced size */
+      height: 20px; /* Reduced size */
       cursor: pointer;
     }
   }
 }
+
+#statususer1{
+  color:rgba(255, 246, 246, 0.476);
+}
+
+.userInfo .icons {
+  display: flex;
+  gap: 15px;
+}
+
+.userInfo .icon-link img {
+  width: 20px; /* Reduced size */
+  height: 20px; /* Reduced size */
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.userInfo .icon-link img:hover {
+  transform: scale(1.1);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Modal Box Styling */
+.modal-box {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  min-width: 300px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-around;
+}
+
+.yes-btn, .no-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.yes-btn {
+  background-color: green;
+  color: white;
+}
+
+.no-btn {
+  background-color: red;
+  color: white;
+}
+
+/* Button Hover Styles */
+.yes-btn:hover, .no-btn:hover {
+  opacity: 0.8;
+}
+
+/* Close icon next to save status */
+.userInfo .status-edit {
+  position: relative; /* To position the close button */
+}
+
+

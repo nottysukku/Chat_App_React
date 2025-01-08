@@ -14,7 +14,7 @@
 
 /* Modal Box */
 .modal-box {
-  color:black;
+  color: black;
   background: white;
   padding: 20px 40px;
   border-radius: 10px;
@@ -53,7 +53,6 @@
   background-color: #ccc;
 }
 
-
 .message {
   position: relative;
 }
@@ -71,7 +70,7 @@
   background-color: white;
   border: 1px solid #ddd;
   border-radius: 5px;
-  padding: 5px;
+  /* padding: 5px; */
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
@@ -81,7 +80,7 @@
 .message .dropdown button {
   background: none;
   border: none;
-  padding: 5px 10px;
+  padding: 1.5px 4px;
   cursor: pointer;
   font-size: 14px;
   color: #333;
@@ -264,11 +263,55 @@
   }
 }
 
-#linked{
+/* Add media query for small screen devices */
+@media (max-width: 600px) {
+  .message {
+    /* Increase width to allow space for buttons */
+    width: calc(100% - 30px);
+    padding-right: 30px; /* Adds extra padding on the right for better clickability */
+  }
+
+  .message .dropdown button {
+    padding: 5px 10px;
+    font-size: 12px;
+    min-width: 80px; /* Keeps the button small but tappable */
+  }
+
+  /* Adjust the dropdown box placement */
+  .message .dropdown {
+    top: 15px;
+    right: 10px;
+    width: auto; /* Adjust width automatically */
+  }
+
+  .message.own .texts p {
+    font-size: 14px; /* Smaller text for better responsiveness */
+  }
+
+  /* Modify the icons in the bottom bar to fit the small screen */
+  .bottom .icons img {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+#linked {
   cursor: pointer;
   transition: transform 0.3s ease, opacity 0.3s ease;
-&:hover{
+}
+
+#linked:hover {
   transform: scale(1.1);
   opacity: 0.8;
 }
+
+#delete{
+
+  cursor: pointer;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+
+  &:hover {
+    transform: scale(0.7);
+    opacity: 0.8;
+  }
 }
