@@ -1,100 +1,226 @@
-.userInfo .status-section {
-  margin-top: 10px;
-  text-align: center;
-}
-
-.userInfo .status-display {
-  font-size: 1rem;
-  color: #333;
-  cursor: pointer;
-}
-
-.userInfo .status-edit input {
-  font-size: 1rem;
-  padding: 5px 10px;
-  width: 100%;
-}
-#closebut {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  font-size: 1.2rem;
-  color: #ff0000;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-#closbut:hover {
-  color: #cc0000;
-  opacity: 0.8;
-}
-.userInfo .status-edit button {
-  padding: 5px 10px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  cursor: pointer;
-  margin-top: 5px;
-}
-
-.userInfo .save-status-btn {
-  background-color: #4CAF50;
-}
-
 .userInfo {
   padding: 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  .user {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-
-    img {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      object-fit: cover;
-    }
-  }
-
-  .icons {
-    display: flex;
-    gap: 20px;
-
-    img {
-      width: 20px; /* Reduced size */
-      height: 20px; /* Reduced size */
-      cursor: pointer;
-    }
-  }
+  gap: 20px;
+  position: relative;
+  background-color: hsla(0, 0%, 100%, 0);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-#statususer1{
-  color:rgba(255, 246, 246, 0.476);
+/* User Section */
+.user {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
-.userInfo .icons {
+.user-avatar {
+  position: relative;
+  width: 50px;
+  height: 50px;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e5e5;
+}
+
+.avatar-edit-button {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  background: #4CAF50;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.avatar-edit-button:hover {
+  transform: scale(1.1);
+  background: #45a049;
+}
+
+.avatar-buttons {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: flex;
+  gap: 5px;
+}
+
+.avatar-buttons button {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.save-avatar-btn {
+  background-color: #4CAF50;
+}
+
+.cancel-avatar-btn {
+  background-color: #f44336;
+}
+
+.avatar-buttons button:hover {
+  transform: scale(1.1);
+  opacity: 0.9;
+}
+
+/* Username Section */
+.username-display {
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 0;
+  transition: color 0.3s ease;
+}
+
+.username-display:hover {
+  color: #4CAF50;
+}
+
+.username-edit {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.username-edit input {
+  padding: 5px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.username-edit input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.save-username-btn,
+.cancel-username-btn {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.save-username-btn {
+  background-color: #4CAF50;
+}
+
+.cancel-username-btn {
+  background-color: #f44336;
+}
+
+/* Status Section */
+.status-section {
+  flex-grow: 1;
+  text-align: center;
+  margin: 0 20px;
+}
+
+.status-display {
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.status-display:hover {
+  color: #4CAF50;
+}
+
+.status-edit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.status-edit input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.status-edit input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.save-status-btn,
+.cancel-status-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.save-status-btn {
+  background-color: #4CAF50;
+}
+
+.cancel-status-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: transparent;
+  color: #f44336;
+  padding: 0;
+  font-size: 1.2rem;
+}
+
+/* Icons Section */
+.icons {
   display: flex;
   gap: 15px;
 }
 
-.userInfo .icon-link img {
-  width: 20px; /* Reduced size */
-  height: 20px; /* Reduced size */
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.userInfo .icon-link img:hover {
-  transform: scale(1.1);
-  opacity: 0.8;
+.icon-button {
+  background: none;
+  border: none;
+  padding: 0;
   cursor: pointer;
+  transition: transform 0.3s ease;
 }
 
-/* Modal Overlay */
+.icon-button img {
+  width: 24px;
+  height: 24px;
+}
+
+.icon-button:hover {
+  transform: scale(1.1);
+}
+
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -108,45 +234,52 @@
   z-index: 1000;
 }
 
-/* Modal Box Styling */
 .modal-box {
-  background-color: #fff;
-  padding: 20px;
+  background: white;
+  padding: 24px;
   border-radius: 8px;
-  text-align: center;
   min-width: 300px;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-box h2 {
+  margin-bottom: 20px;
+  font-size: 1.2rem;
 }
 
 .modal-actions {
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
+  gap: 20px;
 }
 
-.yes-btn, .no-btn {
-  padding: 10px 20px;
+.yes-btn,
+.no-btn {
+  padding: 8px 24px;
   border: none;
   border-radius: 4px;
+  color: white;
   cursor: pointer;
+  font-size: 1rem;
+  transition: opacity 0.3s ease;
 }
 
 .yes-btn {
-  background-color: green;
-  color: white;
+  background-color: #4CAF50;
 }
 
 .no-btn {
-  background-color: red;
-  color: white;
+  background-color: #f44336;
 }
 
-/* Button Hover Styles */
-.yes-btn:hover, .no-btn:hover {
-  opacity: 0.8;
+.yes-btn:hover,
+.no-btn:hover {
+  opacity: 0.9;
 }
 
-/* Close icon next to save status */
-.userInfo .status-edit {
-  position: relative; /* To position the close button */
+/* Disabled State */
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
-
-

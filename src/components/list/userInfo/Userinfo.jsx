@@ -1,160 +1,240 @@
-import "./userInfo.css";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useUserStore } from "../../../lib/userStore";
-import { auth, db } from "../../../lib/firebase"; // Import Firebase configurations
-import { doc, getDoc, setDoc } from "firebase/firestore"; // Use Firestore functions to get and set status
+import { auth, db } from "../../../lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import "./userInfo.css";
 
-const Userinfo = () => {
+const UserInfo = () => {
   const { currentUser } = useUserStore();
-  const [status, setStatus] = useState("Hey! I'm using Chatapp."); // Default value for status
-  const [isEditing, setIsEditing] = useState(false); // Track if status is being edited
-  const [loading, setLoading] = useState(false); // Track loading state for saving status
-
+  const [status, setStatus] = useState("Hey! I'm using Chatapp.");
+  const [username, setUsername] = useState(currentUser.username);
+  const [avatar, setAvatar] = useState(currentUser.avatar || "./avatar.png");
+  const [tempAvatar, setTempAvatar] = useState(null);
+  const [isEditing, setIsEditing] = useState({
+    status: false,
+    username: false,
+    avatar: false
+  });
+  const [loading, setLoading] = useState(false);
   const [showGitHubModal, setShowGitHubModal] = useState(false);
   const [showTodoModal, setShowTodoModal] = useState(false);
 
-  // Fetch user status from Firestore when the component mounts
   useEffect(() => {
-    const fetchStatus = async () => {
+    const fetchUserData = async () => {
       try {
-        const docRef = doc(db, "users", currentUser.id); // Get user document from Firestore
+        const docRef = doc(db, "users", currentUser.id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setStatus(docSnap.data().status || "Hey! I'm using Chatapp."); // Set the status if exists, otherwise default
+          const userData = docSnap.data();
+          setStatus(userData.status || "Hey! I'm using Chatapp.");
+          setUsername(userData.username || currentUser.username);
+          setAvatar(userData.avatar || "./avatar.png");
         }
       } catch (error) {
-        console.error("Error fetching user status:", error);
+        console.error("Error fetching user data:", error);
       }
     };
-    fetchStatus();
+    fetchUserData();
   }, [currentUser.id]);
 
-  // Open confirmation modal for GitHub link
-  const openGitHubModal = () => setShowGitHubModal(true);
+  const handleSave = async (field) => {
+    setLoading(true);
+    try {
+      const userDocRef = doc(db, "users", currentUser.id);
+      const updateData = {};
+      
+      switch (field) {
+        case 'status':
+          updateData.status = status;
+          break;
+        case 'username':
+          updateData.username = username;
+          break;
+        case 'avatar':
+          updateData.avatar = tempAvatar;
+          setAvatar(tempAvatar);
+          break;
+      }
 
-  // Open confirmation modal for ToDo link
-  const openTodoModal = () => setShowTodoModal(true);
+      await setDoc(userDocRef, updateData, { merge: true });
+      setIsEditing({ ...isEditing, [field]: false });
+      setTempAvatar(null);
+    } catch (error) {
+      console.error(`Error updating ${field}:`, error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Handle redirection to GitHub
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTempAvatar(reader.result);
+        setIsEditing({ ...isEditing, avatar: true });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const cancelAvatarChange = () => {
+    setTempAvatar(null);
+    setIsEditing({ ...isEditing, avatar: false });
+  };
+
   const handleGoToGitHub = () => {
     window.open("https://github.com/nottysukku", "_blank");
     setShowGitHubModal(false);
   };
 
-  // Handle redirection to ToDo List
   const handleGoToTodo = () => {
     window.open("https://to-do-list-five-self.vercel.app/", "_blank");
     setShowTodoModal(false);
   };
 
-  // Close modal
   const handleCloseModal = () => {
     setShowGitHubModal(false);
     setShowTodoModal(false);
   };
 
-  // Handle status input changes
-  const handleStatusChange = (e) => setStatus(e.target.value);
-
-  // Save updated status to Firestore
-  const handleSaveStatus = async () => {
-    setLoading(true);
-    try {
-      const userDocRef = doc(db, "users", currentUser.id); // Get user document in Firestore
-      await setDoc(
-        userDocRef,
-        {
-          status,
-        },
-        { merge: true } // Merge status with existing user data
-      );
-      setIsEditing(false); // Stop editing after saving
-      setLoading(false);
-    } catch (error) {
-      console.error("Error updating status:", error);
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="userInfo">
       <div className="user">
-        <img src={currentUser.avatar || "./avatar.png"} alt="User Avatar" />
-        <h2>{currentUser.username}</h2>
-      </div>
+        <div className="user-avatar">
+          <img 
+            src={tempAvatar || avatar} 
+            alt="User Avatar" 
+          />
+          {!isEditing.avatar ? (
+            <label className="avatar-edit-button">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
+              />
+              <span className="edit-text">Edit</span>
+            </label>
+          ) : (
+            <div className="avatar-buttons">
+              <button
+                onClick={() => handleSave('avatar')}
+                className="save-avatar-btn"
+                disabled={loading}
+              >
+                {loading ? "..." : "✓"}
+              </button>
+              <button
+                onClick={cancelAvatarChange}
+                className="cancel-avatar-btn"
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </div>
 
-      {/* Status Section */}
-      <div className="status-section">
-        {isEditing ? (
-          <div className="status-edit">
+        {isEditing.username ? (
+          <div className="username-edit">
             <input
               type="text"
-              value={status}
-              onChange={handleStatusChange}
-              placeholder="Edit your status..."
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
             />
             <button
               disabled={loading}
-              className="save-status-btn"
-              onClick={handleSaveStatus}
+              onClick={() => handleSave('username')}
+              className="save-username-btn"
             >
-              {loading ? "Saving..." : "Save Status"}
+              {loading ? "..." : "✓"}
             </button>
-            {/* Close icon */}
             <button
-            id="closebut"
-              className="close-status-btn"
-              onClick={() => setIsEditing(false)} // Close the edit box
+              onClick={() => setIsEditing({ ...isEditing, username: false })}
+              className="cancel-username-btn"
             >
               ×
             </button>
           </div>
         ) : (
-          <div className="status-display" onClick={() => setIsEditing(true)}>
-            <p id="statususer1">{status}</p>
+          <h2 
+            className="username-display"
+            onClick={() => setIsEditing({ ...isEditing, username: true })}
+          >
+            {username}
+          </h2>
+        )}
+      </div>
+
+      <div className="status-section">
+        {isEditing.status ? (
+          <div className="status-edit">
+            <input
+              type="text"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              placeholder="Edit your status..."
+            />
+            <button
+              disabled={loading}
+              className="save-status-btn"
+              onClick={() => handleSave('status')}
+            >
+              {loading ? "Saving..." : "Save Status"}
+            </button>
+            <button
+              className="cancel-status-btn"
+              onClick={() => setIsEditing({ ...isEditing, status: false })}
+            >
+              ×
+            </button>
+          </div>
+        ) : (
+          <div 
+            className="status-display" 
+            onClick={() => setIsEditing({ ...isEditing, status: true })}
+          >
+            <p>{status}</p>
           </div>
         )}
       </div>
 
-      {/* Icons */}
       <div className="icons">
-        <a
-          id="githublink"
-          onClick={openGitHubModal} // Trigger GitHub modal on click
-          className="icon-link"
+        <button
+          className="icon-button"
+          onClick={() => setShowGitHubModal(true)}
         >
           <img src="./more.png" alt="More Options" />
-        </a>
-
-        <a
-          onClick={openTodoModal} // Trigger ToDo List modal on click
-          className="icon-link"
+        </button>
+        <button
+          className="icon-button"
+          onClick={() => setShowTodoModal(true)}
         >
           <img src="./edit.png" alt="Go to ToDo List" />
-        </a>
+        </button>
       </div>
 
-      {/* Confirmation Modal for GitHub */}
-      {showGitHubModal && (
+      {(showGitHubModal || showTodoModal) && (
         <div className="modal-overlay">
           <div className="modal-box">
-            <h2>This will take you to my GitHub page. Do you want to go?</h2>
+            <h2>
+              {showGitHubModal 
+                ? "This will take you to my GitHub page. Do you want to go?"
+                : "This will help you complete your goals! Do you want to go?"}
+            </h2>
             <div className="modal-actions">
-              <button className="yes-btn" onClick={handleGoToGitHub}>Yes</button>
-              <button className="no-btn" onClick={handleCloseModal}>No</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Confirmation Modal for ToDo List */}
-      {showTodoModal && (
-        <div className="modal-overlay">
-          <div className="modal-box">
-            <h2>This will help you complete your goals! Do you want to go?</h2>
-            <div className="modal-actions">
-              <button className="yes-btn" onClick={handleGoToTodo}>Yes</button>
-              <button className="no-btn" onClick={handleCloseModal}>No</button>
+              <button 
+                className="yes-btn"
+                onClick={showGitHubModal ? handleGoToGitHub : handleGoToTodo}
+              >
+                Yes
+              </button>
+              <button 
+                className="no-btn"
+                onClick={handleCloseModal}
+              >
+                No
+              </button>
             </div>
           </div>
         </div>
@@ -163,4 +243,4 @@ const Userinfo = () => {
   );
 };
 
-export default Userinfo;
+export default UserInfo;
