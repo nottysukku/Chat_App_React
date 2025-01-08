@@ -1,9 +1,5 @@
----
-
 # 💬 **React+Firebase Chat** 🚀  
 **Stay connected. Simplify communication. All powered by React and Firebase.**  
-
----
 
 ## 🌟 **Features You’ll Love**  
 - 🔥 **Seamless Real-time Chat**: Powered by Firebase’s lightning-fast database.  
