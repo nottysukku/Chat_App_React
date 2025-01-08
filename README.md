@@ -1,5 +1,3 @@
-Here's a README tailored for **React+Firebase Chat**:  
-
 ---
 
 # 💬 **React+Firebase Chat** 🚀  
