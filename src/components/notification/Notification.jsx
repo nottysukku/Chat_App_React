@@ -4,7 +4,10 @@ import "react-toastify/dist/ReactToastify.css";
 const Notification = () => {
   return (
     <div className=''>
-      <ToastContainer position="bottom-right"/>
+      <ToastContainer 
+        style={{ position: "absolute", width: "100%", maxWidth: "400px" }} 
+        position="bottom-left"
+      />
     </div>
   )
 }

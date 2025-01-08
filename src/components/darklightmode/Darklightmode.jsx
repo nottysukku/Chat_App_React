@@ -23,7 +23,7 @@ export default function Darklightmode() {
   return (
    
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-         <Logoutbtn />
+         {/* <Logoutbtn /> */}
         <img width={40} src="moonandsun-removebg-preview.png" alt="darkmode" />
         <Switch id="switch" checked={toggleDarkMode} onChange={toggleDarkTheme} />
  

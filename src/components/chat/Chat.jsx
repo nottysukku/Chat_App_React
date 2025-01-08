@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./chat.css";
 import EmojiPicker from "emoji-picker-react";
 import {
-  arrayUnion,
+  arrayRemove,
   doc,
-  getDoc,
   onSnapshot,
   updateDoc,
 } from "firebase/firestore";
@@ -18,15 +17,13 @@ const Chat = () => {
   const [chat, setChat] = useState();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
-  const [img, setImg] = useState({
-    file: null,
-    url: "",
-  });
-
+  const [hoveredMessage, setHoveredMessage] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(false); // Modal visibility state
+  const [messageToDelete, setMessageToDelete] = useState(null); // Store the message to delete
+  const [img, setImg] = useState({ file: null, url: "" });
   const { currentUser } = useUserStore();
   const { chatId, user, isCurrentUserBlocked, isReceiverBlocked } =
     useChatStore();
-
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -50,65 +47,27 @@ const Chat = () => {
 
   const handleImg = (e) => {
     if (e.target.files[0]) {
-      setImg({
-        file: e.target.files[0],
-        url: URL.createObjectURL(e.target.files[0]),
-      });
+      setImg({ file: e.target.files[0], url: URL.createObjectURL(e.target.files[0]) });
     }
   };
 
-  const handleSend = async () => {
-    if (text === "") return;
-
-    let imgUrl = null;
+  const handleDelete = async () => {
+    if (!messageToDelete) return;
 
     try {
-      if (img.file) {
-        imgUrl = await upload(img.file);
-      }
-
       await updateDoc(doc(db, "chats", chatId), {
-        messages: arrayUnion({
-          senderId: currentUser.id,
-          text,
-          createdAt: new Date(),
-          ...(imgUrl && { img: imgUrl }),
-        }),
+        messages: arrayRemove(messageToDelete),
       });
-
-      const userIDs = [currentUser.id, user.id];
-
-      userIDs.forEach(async (id) => {
-        const userChatsRef = doc(db, "userchats", id);
-        const userChatsSnapshot = await getDoc(userChatsRef);
-
-        if (userChatsSnapshot.exists()) {
-          const userChatsData = userChatsSnapshot.data();
-
-          const chatIndex = userChatsData.chats.findIndex(
-            (c) => c.chatId === chatId
-          );
-
-          userChatsData.chats[chatIndex].lastMessage = text;
-          userChatsData.chats[chatIndex].isSeen =
-            id === currentUser.id ? true : false;
-          userChatsData.chats[chatIndex].updatedAt = Date.now();
-
-          await updateDoc(userChatsRef, {
-            chats: userChatsData.chats,
-          });
-        }
-      });
-    } catch (err) {
-      console.log(err);
-    } finally{
-    setImg({
-      file: null,
-      url: "",
-    });
-
-    setText("");
+    } catch (error) {
+      console.error("Error deleting message:", error);
     }
+    setMessageToDelete(null);
+    setConfirmModal(false); // Close the modal
+  };
+
+  const openModal = (message) => {
+    setMessageToDelete(message); // Set the message to delete
+    setConfirmModal(true); // Show the modal
   };
 
   return (
@@ -118,28 +77,33 @@ const Chat = () => {
           <img src={user?.avatar || "./avatar2.png"} alt="" />
           <div className="texts">
             <span>{user?.username}</span>
-            <p>Lorem ipsum dolor, sit amet.</p>
+            <p>Hey! I'm using Chatapp</p>
           </div>
         </div>
         <div className="icons">
           <img src="./phone.png" alt="" />
           <img src="./video.png" alt="" />
-          <img src="./info.png" alt="" />
+          <img id="linked" src="./info.png" onClick={() => window.open("https://www.linkedin.com/in/sukrit-chopra-5923a9215/")} alt="" />
         </div>
       </div>
       <div className="center">
         {chat?.messages?.map((message) => (
           <div
-            className={
-              message.senderId === currentUser?.id ? "message own" : "message"
-            }
-            key={message?.createAt}
+            className={`message ${message.senderId === currentUser?.id ? "own" : ""}`}
+            key={message.createdAt}
+            onMouseEnter={() => setHoveredMessage(message)}
+            onMouseLeave={() => setHoveredMessage(null)}
           >
             <div className="texts">
               {message.img && <img src={message.img} alt="" />}
               <p>{message.text}</p>
               <span>{format(message.createdAt.toDate())}</span>
             </div>
+            {hoveredMessage === message && message.senderId === currentUser?.id && (
+              <div className="dropdown">
+                <button onClick={() => openModal(message)}>Delete</button>
+              </div>
+            )}
           </div>
         ))}
         {img.url && (
@@ -167,33 +131,36 @@ const Chat = () => {
         </div>
         <input
           type="text"
-          placeholder={
-            isCurrentUserBlocked || isReceiverBlocked
-              ? "You cannot send a message"
-              : "Type a message..."
-          }
+          placeholder={isCurrentUserBlocked || isReceiverBlocked ? "You cannot send a message" : "Type a message..."}
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={isCurrentUserBlocked || isReceiverBlocked}
         />
         <div className="emoji">
-          <img
-            src="./emoji.png"
-            alt=""
-            onClick={() => setOpen((prev) => !prev)}
-          />
+          <img src="./emoji.png" alt="" onClick={() => setOpen((prev) => !prev)} />
           <div className="picker">
             <EmojiPicker open={open} onEmojiClick={handleEmoji} />
           </div>
         </div>
         <button
           className="sendButton"
-          onClick={handleSend}
-          disabled={isCurrentUserBlocked || isReceiverBlocked}
+          onClick={() => {/* Add Send Functionality Here */}}
         >
           Send
         </button>
       </div>
+
+      {confirmModal && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h2>ARE YOU SURE YOU WANT TO PERMANENTLY DELETE THIS MESSAGE?</h2>
+            <div className="modal-actions">
+              <button className="yes-btn" onClick={handleDelete}>Yes</button>
+              <button className="no-btn" onClick={() => setConfirmModal(false)}>No</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

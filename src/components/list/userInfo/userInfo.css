@@ -1,3 +1,21 @@
+.userInfo .icons {
+  display: flex;
+  gap: 15px;
+}
+
+.userInfo .icon-link img {
+  width: 32px;
+  height: 32px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.userInfo .icon-link img:hover {
+  transform: scale(1.1);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+
 .userInfo {
   padding: 20px;
   display: flex;
