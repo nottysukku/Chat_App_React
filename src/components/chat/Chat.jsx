@@ -14,8 +14,9 @@ import { useChatStore } from "../../lib/chatStore";
 import { useUserStore } from "../../lib/userStore";
 import upload from "../../lib/upload";
 import { format } from "timeago.js";
-import {toast} from "react-toastify";
+import { toast } from "react-toastify";
 import LoadingPopup from "./LoadingPopup";
+
 const Chat = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [chat, setChat] = useState();
@@ -26,8 +27,14 @@ const Chat = () => {
   const [messageToDelete, setMessageToDelete] = useState(null); // Store the message to delete
   const [img, setImg] = useState({ file: null, url: "" });
   const { currentUser } = useUserStore();
-  const { chatId, user, isCurrentUserBlocked, isReceiverBlocked } =
-    useChatStore();
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const chunks = useRef([]);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  const { chatId, user, isCurrentUserBlocked, isReceiverBlocked } = useChatStore();
   const endRef = useRef(null);
 
   useEffect(() => {
@@ -44,6 +51,31 @@ const Chat = () => {
     };
   }, [chatId]);
 
+  // Start/stop recording logic and timer
+  useEffect(() => {
+    let timer;
+    if (isRecording) {
+      // Start the timer
+      timer = setInterval(() => {
+        setElapsedTime((prev) => prev + 1);
+      }, 1000);
+    } else {
+      // Stop the timer
+      clearInterval(timer);
+      setElapsedTime(0);
+    }
+
+    // Clean up on component unmount
+    return () => clearInterval(timer);
+  }, [isRecording]);
+
+  // Format the time to "MM:SS"
+  const formatTime = (time) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
+
   const handleEmoji = (e) => {
     setText((prev) => prev + e.emoji);
     setOpen(false);
@@ -51,30 +83,29 @@ const Chat = () => {
 
   const handleImg = (e) => {
     const file = e.target.files[0];
-    
+
     if (!file) return; // No file selected
-  
+
     // Check if the file type is an image
     if (!file.type.startsWith('image/')) {
       toast.error("Please upload an image"); // Show error toast for non-image files
       return;
     }
-  
+
     // Check if the file size is greater than 3MB
     if (file.size > 3 * 1024 * 1024) {
       toast.error("Image size exceeds 3MB limit!"); // Show error toast
       return;
     }
-  
+
     // If file is an image and size is under 3MB, set the image state and generate the URL for preview
     setImg({
       file: file,
       url: URL.createObjectURL(file),
     });
-  
+
     toast.success("Image selected successfully!"); // Optional: show success toast on image selection
   };
-
 
   const handleDelete = async () => {
     if (!messageToDelete) return;
@@ -95,7 +126,6 @@ const Chat = () => {
     setConfirmModal(true); // Show the modal
   };
 
-  
   const handleAttach = async () => {
     const fileInput = document.createElement("input");
     fileInput.type = "file";
@@ -103,18 +133,18 @@ const Chat = () => {
     fileInput.onchange = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-  
+
       if (file.size > 3 * 1024 * 1024) {
         toast.error("File size exceeds 3MB limit!");
         return;
       }
-  
+
       try {
         setUploadProgress(0); // Reset progress
         const fileUrl = await upload(file, (progress) => {
           setUploadProgress(progress); // Update progress
         });
-        
+
         await updateDoc(doc(db, "chats", chatId), {
           messages: [
             ...chat.messages,
@@ -127,7 +157,7 @@ const Chat = () => {
             },
           ],
         });
-        
+
         toast.success("File uploaded successfully!");
       } catch (error) {
         console.error("Error uploading file:", error);
@@ -138,13 +168,12 @@ const Chat = () => {
     };
     fileInput.click();
   };
-  
-  // Handle send message
+
   const handleSend = async () => {
     if (!text.trim() && !img.file) return;
-  
+
     let imgUrl = null;
-  
+
     try {
       // Upload image if exists
       if (img.file) {
@@ -153,7 +182,7 @@ const Chat = () => {
           setUploadProgress(progress); // Update progress
         });
       }
-  
+
       // Update chat messages in Firestore
       await updateDoc(doc(db, "chats", chatId), {
         messages: arrayUnion({
@@ -163,17 +192,17 @@ const Chat = () => {
           ...(imgUrl && { img: imgUrl }),
         }),
       });
-  
+
       // Update user chat details for both users
       const userIDs = [currentUser.id, user.id];
       for (const id of userIDs) {
         const userChatsRef = doc(db, "userchats", id);
         const userChatsSnapshot = await getDoc(userChatsRef);
-        
+
         if (userChatsSnapshot.exists()) {
           const userChatsData = userChatsSnapshot.data();
           const chatIndex = userChatsData.chats.findIndex((c) => c.chatId === chatId);
-          
+
           if (chatIndex >= 0) {
             userChatsData.chats[chatIndex].lastMessage = text;
             userChatsData.chats[chatIndex].isSeen = id === currentUser.id;
@@ -182,12 +211,12 @@ const Chat = () => {
           }
         }
       }
-  
+
       // Show success toast if image was uploaded
       if (img.file) {
         toast.success("Message with image sent successfully!");
       }
-  
+
     } catch (err) {
       console.error("Error sending message:", err);
       toast.error("Failed to send message. Please try again.");
@@ -196,21 +225,92 @@ const Chat = () => {
       setText("");
       setImg({ file: null, url: "" });
       setUploadProgress(0); // Reset progress bar
-      
+
       // Scroll to the bottom of the chat
       endRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   };
+
+  const startRecording = async () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast.error("Your browser does not support audio recording.");
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+
+      recorder.ondataavailable = (event) => chunks.current.push(event.data);
+      recorder.onstop = () => {
+        const blob = new Blob(chunks.current, { type: 'audio/webm' });
+        chunks.current = [];
+        setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast.error("Failed to start audio recording.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const handleSendAudio = async () => {
+    if (!audioBlob) {
+      toast.error("No audio file available.");
+      return;
+    }
   
+    try {
+      console.log("audioBlob:", audioBlob);  // Debugging output
+      
+      // Upload audio file
+      setUploadProgress(0);
+      const audioUrl = await upload(audioBlob, (progress) => {
+        setUploadProgress(progress); // Update progress
+      });
+  
+      console.log("Uploaded Audio URL:", audioUrl); // Check if URL is returned
+  
+      await updateDoc(doc(db, "chats", chatId), {
+        messages: arrayUnion({
+          senderId: currentUser.id,
+          text: "",
+          createdAt: new Date(),
+          audio: audioUrl,  // Use the uploaded audio URL
+          type: "audio",
+        }),
+      });
+  
+      toast.success("Audio message sent!");
+    } catch (error) {
+      console.error("Error sending audio message:", error);
+      toast.error("Failed to send audio message. Please try again.");
+    } finally {
+      setAudioBlob(null);
+      setAudioUrl(null);
+      setUploadProgress(0);
+    }
+  };
+
   return (
     <div className="chat">
-       
       <div className="top">
         <div className="user">
           <img src={user?.avatar || "./avatar2.png"} alt="" />
           <div className="texts">
             <span>{user?.username}</span>
-            <p>{user?.status||"Hey! I'm using Chatapp"}</p>
+            <p>{user?.status || "Hey! I'm using Chatapp"}</p>
           </div>
         </div>
         <div className="icons">
@@ -221,32 +321,39 @@ const Chat = () => {
       </div>
       <div className="center">
         {uploadProgress > 0 && <LoadingPopup progress={uploadProgress} />}
-     
-      {chat?.messages?.map((message) => (
-        <div
-        className={`message ${message.senderId === currentUser?.id ? "own" : ""}`}
-        key={message.createdAt}
-        onMouseEnter={() => setHoveredMessage(message)}
-        onMouseLeave={() => setHoveredMessage(null)}
-        >
-    <div className="texts">
-      {message.img && (
-        <img
-          src={message.img}
-          alt=""
-          onError={(e) => e.target.src = 'attach.png'} // Set to default image on error
-        />
-      )}
-      <p>{message.text}</p>
-      <span>{format(message.createdAt.toDate())}</span>
-    </div>
-    {hoveredMessage === message && message.senderId === currentUser?.id && (
-      <div className="dropdown">
-        <button id="delete" onClick={() => openModal(message)}>Delete</button>
-      </div>
-    )}
-  </div>
-))}
+        {chat?.messages?.map((message) => (
+          <div
+            className={`message ${message.senderId === currentUser?.id ? "own" : ""}`}
+            key={message.createdAt}
+            onMouseEnter={() => setHoveredMessage(message)}
+            onMouseLeave={() => setHoveredMessage(null)}
+          >
+            <div className="texts">
+              {message.img && (
+                <img
+                  src={message.img}
+                  alt="Image"
+                  onError={(e) => (e.target.src = "attach.png")}
+                />
+              )}
+              {message.audio && (
+                <audio controls>
+                  <source src={message.audio} type="audio/mp3" />
+                  Your browser does not support the audio element.
+                </audio>
+              )}
+              <p>{message.text}</p>
+              <span>{format(message.createdAt.toDate())}</span>
+            </div>
+            {hoveredMessage === message && message.senderId === currentUser?.id && (
+              <div className="dropdown">
+                <button id="delete" onClick={() => openModal(message)}>
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
         {img.url && (
           <div className="message own">
             <div className="texts">
@@ -261,15 +368,38 @@ const Chat = () => {
           <label htmlFor="file">
             <img src="./img.png" alt="" />
           </label>
-          <input
-            type="file"
-            id="file"
-            style={{ display: "none" }}
-            onChange={handleImg}
-            />
-        
-          <img style={{ filter: "invert(1)" }} src="./attach.png" alt="" onClick={handleAttach}/>
-          <img src="./mic.png" alt="" />
+          <input type="file" id="file" style={{ display: "none" }} onChange={handleImg} />
+          <img style={{ filter: "invert(1)" }} src="./attach.png" alt="" onClick={handleAttach} />
+          <img
+            src="./mic.png"
+            alt="Record Audio"
+            onClick={isRecording ? stopRecording : startRecording}
+            style={{
+              filter: isRecording ? "invert(1)" : "none",
+              animation: isRecording ? "micAnimation 1s infinite" : "",
+            }}
+          />
+          {audioBlob && (
+            <div className="message own">
+              <audio controls>
+                <source src={audioUrl} type="audio/webm" />
+                Your browser does not support audio playback.
+              </audio>
+              <button onClick={handleSendAudio}>Send Audio</button>
+              <button className="close-btn" onClick={() => setAudioBlob(null)}>
+                ✕
+              </button>
+            </div>
+          )}
+          {isRecording && (
+  <div className="audio-recording-notification">
+    <span>AUDIO IS BEING RECORDED!</span>
+    {/* Ensure the timer visibility */}
+    <div className="audio-timer">
+      {formatTime(elapsedTime)} {/* Display elapsed time */}
+    </div>
+  </div>
+)}
         </div>
         <input
           type="text"
@@ -277,17 +407,14 @@ const Chat = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={isCurrentUserBlocked || isReceiverBlocked}
-          />
+        />
         <div className="emoji">
           <img src="./emoji.png" alt="" onClick={() => setOpen((prev) => !prev)} />
           <div className="picker">
             <EmojiPicker open={open} onEmojiClick={handleEmoji} />
           </div>
         </div>
-        <button
-          className="sendButton"
-          onClick={handleSend}
-        >
+        <button className="sendButton" onClick={handleSend}>
           Send
         </button>
       </div>
@@ -297,8 +424,12 @@ const Chat = () => {
           <div className="modal-box">
             <h2>ARE YOU SURE YOU WANT TO PERMANENTLY DELETE THIS MESSAGE?</h2>
             <div className="modal-actions">
-              <button className="yes-btn" onClick={handleDelete}>Yes</button>
-              <button className="no-btn" onClick={() => setConfirmModal(false)}>No</button>
+              <button className="yes-btn" onClick={handleDelete}>
+                Yes
+              </button>
+              <button className="no-btn" onClick={() => setConfirmModal(false)}>
+                No
+              </button>
             </div>
           </div>
         </div>
