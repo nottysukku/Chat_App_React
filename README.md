@@ -12,12 +12,10 @@
 
 ## 🖼️ **Sneak Peek**  
 
-![Theme Toggle](https://via.placeholder.com/800x400.png?text=Dark+and+Light+Mode+Preview)  
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/z0sCI3Xmllo/0.jpg)](https://www.youtube.com/watch?v=z0sCI3Xmllo)
+
 *Switch between dark and light themes with ease!*  
-
-![Chat Interface](https://via.placeholder.com/800x400.png?text=Chat+Interface+Screenshot)  
 *Modern, intuitive design for seamless chatting!*  
-
 ---
 
 ## ⚙️ **Tech Stack**  
@@ -32,12 +30,12 @@
 
 ### 1️⃣ Clone the Repository  
 ```bash
-git clone https://github.com/yourusername/React-Firebase-Chat.git
+git clone https://github.com/yourusername/Chat_App_React.git
 ```
 
 ### 2️⃣ Install Dependencies  
 ```bash
-cd React-Firebase-Chat  
+cd Chat_App_React
 npm install  
 ```
 
@@ -72,9 +70,7 @@ We’d love to have you onboard! Open issues, suggest features, or submit PRs.
 
 ---
 
-### **Author**  
-📧 **Your Name** – [Email/Website Link]  
-🌐 GitHub: [Your Profile](https://github.com/yourusername)  
+### **Author**- Sukrit
 
 ---  
 
