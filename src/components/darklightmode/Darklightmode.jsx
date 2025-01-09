@@ -10,7 +10,7 @@ export default function Darklightmode() {
   const toggleDarkTheme = () => {
     setToggleDarkMode(!toggleDarkMode);
     document.body.style.backgroundImage = toggleDarkMode
-        ?"url('/bg.jpg')":"url('dark-background.jpg')";
+        ?"url('/bg1.jpg')":"url('dark-background1.jpg')";
 document.body.style.colorScheme = toggleDarkMode ? "light" : "dark";
    document.querySelectorAll("#container").forEach((element) => {
      element.style.backgroundColor = toggleDarkMode ? "rgba(17, 40, 19, 0.25)" : "rgba(17, 40, 19, 0.01)";

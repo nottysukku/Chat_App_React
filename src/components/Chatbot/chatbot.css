@@ -1,0 +1,48 @@
+#chatbot-father{
+    display: flex;
+   
+    align-items: center;
+    justify-content: center;
+}
+
+
+#chatbot{
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #3498db;
+    transition: box-shadow 0.3s ease;
+    position: fixed;
+    cursor: pointer;
+    z-index: 999999999999;
+    
+}
+    #chatbot:hover {
+        box-shadow: 0 0 10px rgba(52, 152, 219, 0.8);
+    }
+
+    #chatbot:active {
+        animation: flash-blue 0.5s;
+    }
+
+    @keyframes flash-blue {
+        0% {
+            background-color: #3498db;
+        }
+        50% {
+            background-color: rgb(0, 187, 255);
+        }
+        100% {
+            background-color: #3498db;
+        }
+    }
+
+
+    #chatgpt-icon{
+        width: 30px;
+        height: 30px;
+        margin: 10px;
+    }
+
+
+    

@@ -10,9 +10,9 @@ body {
   overflow: hidden;
   
   background-image: url("/bg.jpg");
-  background-repeat: no-repeat;
+  background-repeat: repeat;
   display: flex;
-  background-size: cover;
+ 
   align-items: center;
   justify-content: center;
   height: 100vh;
@@ -36,3 +36,28 @@ body {
   border-radius: 10px;
   background-color: rgba(17, 25, 40, 0.9);
 }
+
+
+#darkandchat{
+  display: flex;
+align-items: center;
+justify-content: center;
+gap: 40px;
+  flex-direction: row;
+}
+
+#love{
+  position: absolute;
+}
+#love:hover{
+  color: rgb(0, 255, 64);
+  
+  transition: transform 0.9s;
+  cursor: pointer;
+}
+#love:active{
+  transform: scale(0.9);
+  transition: transform 0.9s;
+}
+
+

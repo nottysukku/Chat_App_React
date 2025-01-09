@@ -18,6 +18,7 @@ const Login = () => {
 
   const [loading, setLoading] = useState(false);
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
  
   const handleAvatar = (e) => {
     if (e.target.files[0]) {
@@ -130,7 +131,19 @@ const Login = () => {
           />
           <input id="inn" type="text" placeholder="Username" name="username" />
           <input id="inn" type="text" placeholder="Email" name="email" />
-          <input id="inn" type="password" placeholder="Password" name="password" />
+          <div className="password-container">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  name="password"
+                />
+                <span
+                  className="toggle-password"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? "👁️" : "👁️‍🗨️"}
+                </span>
+              </div>
           <button disabled={loading}>
             {loading ? "Loading" : "Sign Up"}
           </button>
@@ -138,7 +151,19 @@ const Login = () => {
           ) : (
         <form id="loginform" onSubmit={handleLogin}>
           <input id="inn" type="text" placeholder="Email" name="email" />
-          <input id="inn" type="password" placeholder="Password" name="password" />
+          <div className="password-container">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  name="password"
+                />
+                <span
+                  className="toggle-password"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                >
+                  {showPassword ? "👁️" : "👁️‍🗨️"}
+                </span>
+              </div>
           <button disabled={loading}>
             {loading ? "Loading" : "Sign In"}
           </button>

@@ -12,6 +12,7 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { Card, CardContent, CardMedia, Switch, Typography } from "@mui/material"
 import Darklightmode from "./components/darklightmode/Darklightmode";
+import Chatbot from "./components/Chatbot/Chatbot";
 const App = () => {
   const { currentUser, isLoading, fetchUserInfo } = useUserStore();
   const { chatId } = useChatStore();
@@ -36,8 +37,10 @@ const App = () => {
 
   return (
     <div>
+      <div id="darkandchat">
       <Darklightmode />
-      
+      <Chatbot/>
+      </div>
     <div id="container" className="container">
       {currentUser ? (
         <>
@@ -46,7 +49,10 @@ const App = () => {
           {chatId && <Detail />}
         </>
       ) : (
-        <Login />
+        <><Login />
+        <span id="love">Made with ❤ by Sukritchopra</span>
+        </>
+
         
       )}
       <Notification />

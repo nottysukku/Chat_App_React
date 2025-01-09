@@ -1,3 +1,60 @@
+/* General Styles */
+button {
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background-color: #444;
+  color: white;
+  transform: scale(1.05);
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+/* Password toggle styles */
+.password-container {
+  position: relative;
+}
+
+.password-container input {
+  width: calc(100% - 1px);
+  padding-right: 30px;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  font-size: 18px;
+  color: #444;
+}
+
+.toggle-password:hover {
+  color: black;
+}
+
+/* Switch button */
+.switch-btn {
+  margin-top: 20px;
+  padding: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s;
+}
+
+.switch-btn:hover {
+  background-color: #555;
+  transform: translateY(-2px);
+}
+
+.switch-btn:active {
+  transform: translateY(0);
+}
+
 .login {
   width: 100%;
   height: 100%;
