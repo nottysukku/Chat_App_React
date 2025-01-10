@@ -9,6 +9,13 @@ export default function Darklightmode() {
 
   const toggleDarkTheme = () => {
     setToggleDarkMode(!toggleDarkMode);
+
+    document.querySelectorAll(".chatList, .detail, .userInfo, .center, .chat").forEach((element) => {
+      element.style.border = toggleDarkMode ? "1px solid white" : "1px solid #25D366";
+      element.style.boxShadow = toggleDarkMode ? "2px 2px 2px 2px green" : "2px 2px 2px 2px black";
+    });
+
+
     document.body.style.backgroundImage = toggleDarkMode
         ?"url('/bg1.jpg')":"url('dark-background1.jpg')";
 document.body.style.colorScheme = toggleDarkMode ? "light" : "dark";
