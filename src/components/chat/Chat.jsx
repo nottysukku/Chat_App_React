@@ -23,8 +23,11 @@ const Chat = () => {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [hoveredMessage, setHoveredMessage] = useState(null);
-  const [confirmModal, setConfirmModal] = useState(false); // Modal visibility state
-  const [messageToDelete, setMessageToDelete] = useState(null); // Store the message to delete
+  const [confirmModal, setConfirmModal] = useState(false); 
+  const [confirmModalCall, setConfirmModalCall] = useState(false); 
+  const [confirmModalVideo, setConfirmModalVideo] = useState(false); 
+  const [confirmModalLinkedin, setConfirmModalLinkedin] = useState(false); 
+  const [messageToDelete, setMessageToDelete] = useState(null); 
   const [img, setImg] = useState({ file: null, url: "" });
   const { currentUser } = useUserStore();
   const [isRecording, setIsRecording] = useState(false);
@@ -303,6 +306,24 @@ const Chat = () => {
     }
   };
 
+const handleCall = () => {
+  setConfirmModalCall(false)
+}
+
+const handleVideo = () => {
+  setConfirmModalVideo(false)
+}
+
+const handleLinkedin= () => {
+  setConfirmModalLinkedin(true);
+}
+const handleLinkedin1= () => {
+  setConfirmModalCall(true);
+}
+const handleLinkedin2= () => {
+  setConfirmModalVideo(true);
+}
+
   return (
     <div className="chat">
       <div className="top">
@@ -314,9 +335,10 @@ const Chat = () => {
           </div>
         </div>
         <div className="icons">
-          <img src="./phone.png" alt="" />
-          <img src="./video.png" alt="" />
-          <img id="linked" src="./info.png" onClick={() => window.open("https://www.linkedin.com/in/sukrit-chopra-5923a9215/")} alt="" />
+          <img id="linked" onClick={handleLinkedin1} src="./phone.png" alt="" />
+          <img id="linked" onClick={handleLinkedin2} src="./video.png" alt="" />
+          {/* <img id="linked" src="./info.png" onClick={() => window.open("https://www.linkedin.com/in/sukrit-chopra-5923a9215/")} alt="" /> */}
+          <img id="linked" src="./info.png" onClick={handleLinkedin} alt="" />
         </div>
       </div>
       <div className="center">
@@ -428,6 +450,55 @@ const Chat = () => {
                 Yes
               </button>
               <button className="no-btn" onClick={() => setConfirmModal(false)}>
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmModalLinkedin && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h2>This will take you to my Linkedin page. Do you want to go?</h2>
+            <div className="modal-actions">
+              <button className="yes-btn" onClick={() => {window.open("https://www.linkedin.com/in/sukrit-chopra-5923a9215/")
+              setConfirmModalLinkedin(false)
+              }}>
+                Yes
+              </button>
+              <button className="no-btn" onClick={() => setConfirmModalLinkedin(false)}>
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+{confirmModalVideo && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h2>Do you want to initiate a video call?</h2>
+            <div className="modal-actions">
+              <button className="yes-btn" onClick={handleVideo}>
+                Yes
+              </button>
+              <button className="no-btn" onClick={() => setConfirmModalVideo(false)}>
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+{confirmModalCall && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h2>Do you want to initiate an audio call?</h2>
+            <div className="modal-actions">
+              <button className="yes-btn" onClick={handleCall}>
+                Yes
+              </button>
+              <button className="no-btn" onClick={() => setConfirmModalCall(false)}>
                 No
               </button>
             </div>

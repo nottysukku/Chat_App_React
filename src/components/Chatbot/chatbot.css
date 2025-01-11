@@ -9,13 +9,13 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6a0dad 0%, #8a2be2 100%);
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); /* WhatsApp gradient */
   border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+  box-shadow: 0 4px 15px rgba(18, 140, 126, 0.4);
   transition: all 0.3s ease;
   position: relative;
 }
@@ -34,13 +34,13 @@
 
 .chatbot-trigger:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
+  box-shadow: 0 6px 20px rgba(18, 140, 126, 0.6);
 }
 
 .chatbot-icon {
   width: 28px;
   height: 28px;
-  color: #000000;
+  color: #ffffff; /* White icon */
 }
 
 .chatbot-overlay {
@@ -49,7 +49,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 0, 30, 0.75);
+  background: rgba(18, 140, 126, 0.25); 
   z-index: 1000;
 }
 
@@ -62,20 +62,20 @@
   max-width: 700px;
   height: 80vh;
   max-height: 800px;
-  background: rgba(20, 0, 40, 0.9);
+  background: rgba(18, 140, 126, 0.9); /* WhatsApp green shade */
   border-radius: 20px;
   outline: none;
   overflow: hidden;
-  border: 1px solid rgba(138, 43, 226, 0.2);
+  border: 1px solid rgba(18, 140, 126, 0.2);
 }
 
-.modal-content {
+.modal-content1 {
   height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
-  color: #000000;
-background-color: #696666;
+  color: #ffffff; /* White text for content */
+  background-color: #075E54; /* WhatsApp dark green background */
 }
 
 .modal-header {
@@ -83,8 +83,8 @@ background-color: #696666;
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  background: rgba(25, 0, 50, 0.3);
-  border-bottom: 1px solid rgba(138, 43, 226, 0.2);
+  background: rgba(18, 140, 126, 0.3); /* WhatsApp light green for header */
+  border-bottom: 1px solid rgba(18, 140, 126, 0.2);
 }
 
 .header-content {
@@ -97,14 +97,14 @@ background-color: #696666;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #8a2be2;
-  box-shadow: 0 0 10px rgba(138, 43, 226, 0.6);
+  background: #25D366; /* WhatsApp active green color */
+  box-shadow: 0 0 10px rgba(37, 211, 102, 0.6);
   animation: glow 1.5s ease-in-out infinite alternate;
 }
 
 .modal-header h2 {
   margin: 0;
-  color: #000000;
+  color: #ffffff; /* White text in header */
   font-size: 1.5rem;
   font-weight: 500;
   letter-spacing: 0.5px;
@@ -113,7 +113,7 @@ background-color: #696666;
 .close-button {
   background: none;
   border: none;
-  color: #d500ff;
+  color: #25D366; /* Close button with WhatsApp green */
   font-size: 30px;
   cursor: pointer;
   padding: 8px;
@@ -121,24 +121,24 @@ background-color: #696666;
 }
 
 .close-button:hover {
-  color: #8a2be2;
+  color: #128C7E; /* Darker green on hover */
   transform: rotate(180deg);
 }
 
 .chat-container {
   flex: 1;
   padding: 1rem;
-  background: rgba(30, 0, 60, 0.9);
+  background: rgba(18, 140, 126, 0.8); /* WhatsApp green background */
   overflow: hidden;
 }
 
 :root {
-  --cs-message-input-bg: rgba(30, 0, 40, 0.05);
-  --cs-message-input-border: 1px solid rgba(138, 43, 226, 0.2);
+  --cs-message-input-bg: rgba(18, 140, 126, 0.05); /* Light green background for input */
+  --cs-message-input-border: 1px solid rgba(18, 140, 126, 0.2); /* Green border */
   --cs-message-input-border-radius: 12px;
   --cs-message-input-padding: 0rem;
-  --cs-message-input-color: #000000;
-  --cs-message-input-placeholder-color: rgba(0, 0, 0, 1.0);
+  --cs-message-input-color: #000000; /* White text */
+  --cs-message-input-placeholder-color: rgba(255, 255, 255, 0.5); /* Light placeholder color */
 }
 
 .cs-message-input {
@@ -153,13 +153,12 @@ background-color: #696666;
 }
 
 .cs-message-input__content-editor-wrapper {
-  /* background: transparent !important; */
-background-color: #d500ff;
+  background-color: #128C7E; /* Darker green input area */
 }
 
 .cs-message__content {
-  background: rgba(25, 0, 40, 0.3) !important;
-  border: 1px solid rgba(138, 43, 226, 0.2) !important;
+  background: rgba(18, 140, 126, 0.3) !important; /* Green background for messages */
+  border: 1px solid rgba(18, 140, 126, 0.2) !important;
 }
 
 @keyframes pulse {

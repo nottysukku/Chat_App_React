@@ -93,8 +93,9 @@ const Chatbot = () => {
         onRequestClose={() => setIsModalOpen(false)}
         className="chatbot-modal"
         overlayClassName="chatbot-overlay"
+        
       >
-        <div className="modal-content">
+        <div className="modal-content1">
           <div className="modal-header">
             <div className="header-content">
               <div className="status-indicator"></div>
