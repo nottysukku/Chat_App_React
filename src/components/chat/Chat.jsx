@@ -93,8 +93,8 @@ const Chat = () => {
     }
 
     // Check if the file size is greater than 3MB
-    if (file.size > 3 * 1024 * 1024) {
-      toast.error("Image size exceeds 3MB limit!"); // Show error toast
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error("Image size exceeds 1MB limit!"); // Show error toast
       return;
     }
 
@@ -134,8 +134,8 @@ const Chat = () => {
       const file = e.target.files[0];
       if (!file) return;
 
-      if (file.size > 3 * 1024 * 1024) {
-        toast.error("File size exceeds 3MB limit!");
+      if (file.size > 1 * 1024 * 1024) {
+        toast.error("File size exceeds 1MB limit!");
         return;
       }
 

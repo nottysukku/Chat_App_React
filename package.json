@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@chatscope/chat-ui-kit-react": "^2.0.3",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^6.3.0",
@@ -19,6 +20,8 @@
     "express": "^4.21.2",
     "file-saver": "^2.0.5",
     "firebase": "^10.14.1",
+    "lucide-react": "^0.471.0",
+    "openai": "^4.78.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-modal": "^3.16.3",

@@ -1,119 +1,136 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import Modal from "react-modal";
-import axios from "axios";
-import './chatbot.css';
+import {
+  MainContainer,
+  ChatContainer,
+  MessageList,
+  Message,
+  MessageInput,
+  TypingIndicator
+} from "@chatscope/chat-ui-kit-react";
+import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
+import { MessageCircle } from "lucide-react";
+import OpenAI from "openai";
+import "./chatbot.css";
 
 Modal.setAppElement("#root");
+const openai = new OpenAI({
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true
+});
+
 
 const Chatbot = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [inputText, setInputText] = useState("");
-  const [response, setResponse] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleInputChange = (e) => {
-    setInputText(e.target.value);
-  };
-
-  const handleSubmit = async () => {
-    if (!inputText.trim()) return;
-    
-    setLoading(true);
-    try {
-      const res = await axios.post("YOUR_LLAMA_API_URL", {
-        prompt: inputText,
-      }, {
-        headers: {
-          Authorization: `Bearer YOUR_API_KEY`,
-        },
-      });
-      setResponse(res.data.response || "No response received.");
-    } catch (error) {
-      setResponse("Error: " + error.message);
+  const [messages, setMessages] = useState([
+    {
+      message: "Hello, I'm ChatGPT! Ask me anything!",
+      sentTime: "just now",
+      sender: "ChatGPT"
     }
-    setLoading(false);
-  };
+  ]);
+  const [isTyping, setIsTyping] = useState(false);
 
-  const openChatbot = (e) => {
-    e.stopPropagation();
-    setIsModalOpen(true);
-  };
+  const handleSend = useCallback(async (message) => {
+    if (!message.trim()) return;
 
-  const closeChatbot = () => {
-    setIsModalOpen(false);
-  };
+    const newMessage = {
+      message,
+      direction: "outgoing",
+      sender: "user",
+      sentTime: new Date().toLocaleTimeString()
+    };
+
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
+    setIsTyping(true);
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: updatedMessages.map((msg) => ({
+          role: msg.sender === "ChatGPT" ? "assistant" : "user",
+          content: msg.message
+        }))
+      });
+
+      const assistantMessage = response.choices[0]?.message?.content || "Sorry, I couldn't understand your message.";
+      setMessages([
+        ...updatedMessages,
+        {
+          message: assistantMessage,
+          sender: "ChatGPT",
+          sentTime: new Date().toLocaleTimeString()
+        }
+      ]);
+    } catch (error) {
+      console.error("Error processing message:", error);
+      setMessages([
+        ...updatedMessages,
+        {
+          message: "Sorry, there was an error processing your message.",
+          sender: "ChatGPT",
+          sentTime: new Date().toLocaleTimeString()
+        }
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  }, [messages]);
 
   return (
-    <>
-      <div className="chatbot-father">
-        <div className="chatbot" onClick={openChatbot}>
-          <img className="chatgpt-icon" src="./chatgpt-icon.jpg" alt="chatbot" />
-        </div>
-      </div>
+    <div className="chatbot-container">
+      <button
+        className="chatbot-trigger"
+        onClick={() => setIsModalOpen(true)}
+        aria-label="Open chat"
+      >
+        <MessageCircle className="chatbot-icon" />
+      </button>
 
       <Modal
         isOpen={isModalOpen}
-        onRequestClose={closeChatbot}
-        shouldCloseOnOverlayClick={true}
-        shouldCloseOnEsc={true}
-        style={{
-          overlay: {
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            zIndex: 99999999999
-          },
-          content: {
-            display: 'flex',
-            justifyContent: 'center',
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            right: 'auto',
-            bottom: 'auto',
-            transform: 'translate(-50%, -50%)',
-            width: '90%',
-            maxWidth: '600px',
-            maxHeight: '80vh',
-            padding: '20px',
-            borderRadius: '15px',
-            border: 'none',
-            background: '#fff',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-            overflow: 'auto'
-          }
-        }}
+        onRequestClose={() => setIsModalOpen(false)}
+        className="chatbot-modal"
+        overlayClassName="chatbot-overlay"
       >
         <div className="modal-content">
           <div className="modal-header">
-            <h2>Chat with AI Assistant</h2>
-            <button onClick={closeChatbot} className="close-button">×</button>
-          </div>
-
-          <div className="input-section">
-            <textarea
-              value={inputText}
-              onChange={handleInputChange}
-              placeholder="Type your message here..."
-              className="input-field"
-            />
-            <button 
-              onClick={handleSubmit} 
-              disabled={loading || !inputText.trim()} 
-              className={`submit-button ${loading ? 'loading' : ''}`}
+            <div className="header-content">
+              <div className="status-indicator"></div>
+              <h2>AI Assistant</h2>
+            </div>
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="close-button"
+              aria-label="Close chat"
             >
-              {loading ? "Processing..." : "Send"}
+              ×
             </button>
           </div>
 
-          {response && (
-            <div className="response-section">
-              <div className="response-content">
-                {response}
-              </div>
-            </div>
-          )}
+          <div className="chat-container">
+            <MainContainer>
+              <ChatContainer>
+                <MessageList
+                  scrollBehavior="smooth"
+                  typingIndicator={isTyping ? <TypingIndicator content="AI is thinking..." /> : null}
+                >
+                  {messages.map((message, i) => (
+                    <Message key={i} model={message} />
+                  ))}
+                </MessageList>
+                <MessageInput
+                  placeholder="Type your message here..."
+                  onSend={handleSend}
+                  attachButton={false}
+                />
+              </ChatContainer>
+            </MainContainer>
+          </div>
         </div>
       </Modal>
-    </>
+    </div>
   );
 };
 
