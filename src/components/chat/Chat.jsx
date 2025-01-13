@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./chat.css";
 import EmojiPicker from "emoji-picker-react";
+import Callbox from "../Callbox/Callbox";
+
 import {
   arrayUnion,
   arrayRemove,
@@ -36,7 +38,7 @@ const Chat = () => {
   const [audioUrl, setAudioUrl] = useState(null);
   const chunks = useRef([]);
   const [elapsedTime, setElapsedTime] = useState(0);
-
+const [callboxVisible, setCallboxVisible] = useState(false);
   const { chatId, user, isCurrentUserBlocked, isReceiverBlocked } = useChatStore();
   const endRef = useRef(null);
 
@@ -306,12 +308,14 @@ const Chat = () => {
     }
   };
 
-const handleCall = () => {
-  setConfirmModalCall(false)
-}
+  const handleCall = () => {
+    setConfirmModalCall(false);
+    setCallboxVisible(true);
+  };
 
 const handleVideo = () => {
   setConfirmModalVideo(false)
+  setCallboxVisible(true);
 }
 
 const handleLinkedin= () => {
@@ -324,8 +328,27 @@ const handleLinkedin2= () => {
   setConfirmModalVideo(true);
 }
 
-  return (
-    <div className="chat">
+const handleCallClose = () => {
+  // Small timeout to ensure smooth transition
+  setTimeout(() => {
+    setCallboxVisible(false);
+    setConfirmModalCall(false);
+    setConfirmModalVideo(false);
+  }, 100);
+};
+
+const handleShareLink = (messagee) => {
+ 
+  setText(messagee); 
+  setTimeout(() => {
+    document.querySelector(".sendButton").click();
+  }, 1000);
+
+};
+
+return (
+  <div className="chat">
+       
       <div className="top">
         <div className="user">
           <img src={user?.avatar || "./avatar2.png"} alt="" />
@@ -501,10 +524,17 @@ const handleLinkedin2= () => {
               <button className="no-btn" onClick={() => setConfirmModalCall(false)}>
                 No
               </button>
+
             </div>
           </div>
         </div>
       )}
+  {callboxVisible && (
+  <Callbox 
+  onShareLink={handleShareLink}
+    onClose={handleCallClose} 
+  />
+)}   
     </div>
   );
 };

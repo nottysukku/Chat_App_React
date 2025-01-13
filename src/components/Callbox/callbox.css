@@ -1,0 +1,205 @@
+.share-link-section {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+  }
+  
+  .share-link-button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .share-link-button:hover {
+    background-color: #45a049;
+  }
+
+/* Glass morphism and futuristic overlay */
+.call-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9));
+    background: rgba(0, 0, 0, 0.9); /* Fallback background */
+    backdrop-filter: blur(10px); /* Adds glass effect */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: overlayFadeIn 0.3s ease-out;
+  }
+  
+  /* Container with futuristic border effect */
+  .call-modal-container {
+    position: relative;
+    width: 80%;
+    height: 80%;
+    background: rgba(17, 25, 40, 0.8);
+    border-radius: 16px;
+    box-shadow:
+      0 0 20px rgba(81, 131, 254, 0.3),
+      inset 0 0 20px rgba(81, 131, 254, 0.2);
+    overflow: hidden;
+    animation: containerScale 0.4s ease-out;
+    border: 1px solid rgba(81, 131, 254, 0.3);
+    transform-style: preserve-3d;
+    perspective: 1000px;
+    will-change: transform, opacity;
+  }
+  
+  /* Futuristic close button */
+  .call-close-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    background: rgba(81, 131, 254, 0.2);
+    border: 1px solid rgba(81, 131, 254, 0.5);
+    border-radius: 50%;
+    color: #5183fe;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+    transition: all 0.3s ease;
+    transform-style: preserve-3d;
+    perspective: 100px;
+  }
+  
+  .call-close-button::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba(81, 131, 254, 0.1);
+    transform: translateZ(-10px);
+    filter: blur(5px);
+  }
+  
+  .call-close-button:hover {
+    transform: translateZ(10px) scale(1.1);
+    background: rgba(81, 131, 254, 0.4);
+    box-shadow:
+      0 0 15px rgba(81, 131, 254, 0.5),
+      inset 0 0 10px rgba(81, 131, 254, 0.3);
+  }
+  
+  .call-close-button:active {
+    transform: translateZ(5px) scale(0.95);
+  }
+  
+  .call-close-button:focus {
+    outline: 2px solid #5183fe;
+    box-shadow: 0 0 10px rgba(81, 131, 254, 0.6);
+  }
+  
+  /* Modal container content area */
+  .myCallContainer {
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    animation: contentFadeIn 0.5s ease-out;
+    will-change: transform, opacity;
+  }
+  
+  /* Hover effect for container */
+  .call-modal-container:hover {
+    box-shadow:
+      0 0 30px rgba(81, 131, 254, 0.4),
+      inset 0 0 30px rgba(81, 131, 254, 0.3);
+    transform: translateZ(20px);
+    transition: all 0.3s ease;
+  }
+  
+  /* Animations */
+  @keyframes overlayFadeIn {
+    from {
+      opacity: 0;
+      backdrop-filter: blur(0);
+    }
+    to {
+      opacity: 1;
+      backdrop-filter: blur(10px);
+    }
+  }
+  
+  @keyframes containerScale {
+    from {
+      transform: scale(0.9) translateZ(-100px);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1) translateZ(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes contentFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Glowing border animation */
+  .call-modal-container::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg,
+      rgba(81, 131, 254, 0.3),
+      rgba(81, 131, 254, 0),
+      rgba(81, 131, 254, 0.3)
+    );
+    border-radius: 16px;
+    z-index: -1;
+    animation: borderGlow 3s linear infinite;
+  }
+  
+  @keyframes borderGlow {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  
+  /* Responsive design adjustments */
+  @media (max-width: 768px) {
+    .call-modal-container {
+      width: 95%;
+      height: 70%;
+    }
+    
+    .call-close-button {
+      width: 36px;
+      height: 36px;
+      top: 15px;
+      right: 15px;
+    }
+  }
+  
+  @media (max-height: 480px) {
+    .call-modal-container {
+      height: 90%;
+    }
+  }
+  
