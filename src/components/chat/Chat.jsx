@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./chat.css";
 import EmojiPicker from "emoji-picker-react";
 import Callbox from "../Callbox/Callbox";
@@ -337,14 +337,31 @@ const handleCallClose = () => {
   }, 100);
 };
 
-const handleShareLink = (messagee) => {
- 
-  setText(messagee); 
-  setTimeout(() => {
-    document.querySelector(".sendButton").click();
-  }, 1000);
+const handleShareLink = useCallback(
+  async (messagee) => {
+    const generatedLink = `${messagee}`;
 
-};
+    console.log(generatedLink);
+
+    try {
+      await updateDoc(doc(db, "chats", chatId), {
+        messages: arrayUnion({
+          senderId: currentUser.id,
+          text: generatedLink,
+          createdAt: new Date(),
+          type: "link",
+        }),
+      });
+      toast.success("Link shared in chat!");
+    } catch (error) {
+      console.error("Error sharing link in chat:", error);
+      toast.error("Failed to share link in chat. Please try again.");
+    }
+  },
+  [currentUser.id, chatId]
+);
+  
+
 
 return (
   <div className="chat">

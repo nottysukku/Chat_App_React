@@ -38,7 +38,7 @@
   .call-modal-container {
     position: relative;
     width: 80%;
-    height: 80%;
+    height: 100%;
     background: rgba(17, 25, 40, 0.8);
     border-radius: 16px;
     box-shadow:
@@ -105,7 +105,7 @@
   /* Modal container content area */
   .myCallContainer {
     width: 100%;
-    height: 100%;
+    height: 90%;
     border-radius: 16px;
     overflow: hidden;
     animation: contentFadeIn 0.5s ease-out;
@@ -170,7 +170,7 @@
     );
     border-radius: 16px;
     z-index: -1;
-    animation: borderGlow 3s linear infinite;
+    animation: borderGlow 120s linear infinite;
   }
   
   @keyframes borderGlow {
