@@ -8,7 +8,6 @@
   gap: 20px;
   position: relative;
   background-color: hsla(0, 0%, 100%, 0);
-  
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -284,4 +283,134 @@
 button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+/* Responsive Styles */
+
+/* For screens smaller than 1024px (tablets) */
+@media (max-width: 1024px) {
+  .userInfo {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+  }
+
+  .user {
+    justify-content: center;
+  }
+
+  .username-display {
+    font-size: 1rem;
+  }
+
+  .status-section {
+    margin: 10px 0;
+  }
+
+  .status-edit input,
+  .username-edit input {
+    font-size: 0.9rem;
+    padding: 8px;
+  }
+
+  .save-status-btn,
+  .cancel-status-btn,
+  .save-username-btn,
+  .cancel-username-btn {
+    padding: 6px 12px;
+  }
+
+  .icons {
+    gap: 10px;
+  }
+
+  .icon-button img {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* For screens smaller than 768px (mobile) */
+@media (max-width: 768px) {
+  .userInfo {
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .user {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .username-display {
+    font-size: 1rem;
+  }
+
+  .status-display {
+    font-size: 1rem;
+  }
+
+  .status-edit input,
+  .username-edit input {
+    font-size: 0.9rem;
+    padding: 8px;
+  }
+
+  .icons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .icon-button img {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* For screens smaller than 480px (small mobile) */
+@media (max-width: 480px) {
+  .userInfo {
+    padding: 8px;
+  }
+
+  .user-avatar {
+    width: 35px;
+    height: 35px;
+  }
+
+  .username-display {
+    font-size: 0.9rem;
+  }
+
+  .status-display {
+    font-size: 0.9rem;
+  }
+
+  .status-edit input,
+  .username-edit input {
+    font-size: 0.85rem;
+    padding: 6px;
+  }
+
+  .save-status-btn,
+  .cancel-status-btn,
+  .save-username-btn,
+  .cancel-username-btn {
+    padding: 5px 10px;
+  }
+
+  .icons {
+    gap: 8px;
+  }
+
+  .icon-button img {
+    width: 18px;
+    height: 18px;
+  }
 }

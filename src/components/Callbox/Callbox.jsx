@@ -111,7 +111,7 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink }) => {
   };
 
   return (
-    <div className="call-modal-overlay">
+    <div className="call-modal-overlay call-box-container">
       <div className="call-modal-container">
         {!isCustomRoomIDSet ? (
           <div className="room-id-input-section">

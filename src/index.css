@@ -48,6 +48,7 @@ body {
   border: 1px solid rgba(7, 80, 239, 0.125);
   display: flex;
   overflow: hidden;
+  position: relative; /* Added for absolute positioning of children */
 }
 
 /* Chat Layout */
@@ -55,7 +56,14 @@ body {
   display: flex;
   width: 100%;
   height: 100%;
+  position: absolute; /* Changed to absolute */
+  top: 0;
+  left: 0;
+  overflow-y: auto; /* Allow chat to scroll */
+  z-index: 1; /* Lower z-index than call box */
 }
+
+
 
 /* Login Layout */
 .login-layout {
@@ -104,7 +112,25 @@ body {
   .main-container {
     width: 95vw;
   }
-  
+  .chat-layout {
+    width: 100%;
+  }
+  .chat {
+    width: 90%;
+  }
+  .sendButton{
+    position: relative;
+    right: 150px;
+    top:50px;
+    transform: scale(0.7);
+    
+  }
+.emoji{
+  position: relative;
+  right: 150px;
+  top:55px;
+}
+
   .controls-container {
     gap: 20px;
   }
@@ -115,6 +141,8 @@ body {
     padding: 10px;
   }
   
+
+
   .loading {
     padding: 30px;
     font-size: 24px;

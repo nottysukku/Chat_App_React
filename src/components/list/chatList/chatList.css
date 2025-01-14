@@ -1,3 +1,4 @@
+/* Default styles */
 .chatList {
   flex: 1;
   overflow: scroll;
@@ -83,4 +84,131 @@ img {
 .texts p {
   font-size: 14px;
   font-weight: 300;
+}
+
+/* Responsive Styles */
+
+/* For screens larger than 1024px (desktop or larger tablets) */
+@media (min-width: 1024px) {
+  .search {
+    gap: 30px;
+    padding: 20px 40px;
+  }
+
+  .searchBar {
+    padding: 12px 20px;
+  }
+
+  .add {
+    width: 40px;
+    height: 40px;
+  }
+
+  .item {
+    padding: 25px 30px;
+  }
+}
+
+/* For screens smaller than 1024px and larger than 768px (tablet to small tablet screens) */
+@media (max-width: 1024px) and (min-width: 768px) {
+  .search {
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .searchBar {
+    padding: 12px 18px;
+  }
+
+  .add {
+    width: 36px;
+    height: 36px;
+  }
+
+  .item {
+    padding: 20px 25px;
+  }
+
+  .texts span {
+    font-size: 16px;
+  }
+
+  .texts p {
+    font-size: 13px;
+  }
+}
+
+/* For screens smaller than 768px (mobile and small tablets) */
+@media (max-width: 768px) {
+  .search {
+    flex-direction: column;
+    gap: 15px;
+    padding: 10px;
+  }
+
+  .searchBar {
+    flex-direction: row;
+    padding: 10px;
+  }
+
+  .add {
+    width: 40px;
+    height: 40px;
+  }
+
+  .item {
+    padding: 15px 20px;
+    gap: 15px;
+  }
+
+  .item img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .texts span {
+    font-size: 14px;
+  }
+
+  .texts p {
+    font-size: 12px;
+  }
+
+  .text {
+    font-size: 14px;
+  }
+}
+
+/* For screens smaller than 480px (small mobile screens) */
+@media (max-width: 480px) {
+  .search {
+    padding: 10px;
+  }
+
+  .searchBar {
+    padding: 8px;
+  }
+
+  .add {
+    width: 35px;
+    height: 35px;
+  }
+
+  .item {
+    padding: 12px 15px;
+    gap: 10px;
+  }
+
+  .item img {
+    width: 35px;
+    height: 35px;
+  }
+
+  .texts span {
+    font-size: 12px;
+  }
+
+  .texts p {
+    font-size: 11px;
+  }
 }

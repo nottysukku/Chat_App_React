@@ -1,32 +1,33 @@
+/* Share Link Section */
 .share-link-section {
     display: flex;
     justify-content: center;
-    margin-top: 15px;
+    margin-top: 1rem;
   }
   
   .share-link-button {
-    padding: 10px 20px;
+    padding: 0.75rem 1.25rem;
     background-color: #4CAF50;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 0.375rem;
     cursor: pointer;
+    transition: background-color 0.3s ease;
   }
   
   .share-link-button:hover {
     background-color: #45a049;
   }
-
-/* Glass morphism and futuristic overlay */
-.call-modal-overlay {
+  
+  /* Glass morphism and futuristic overlay */
+  .call-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.9));
-    background: rgba(0, 0, 0, 0.9); /* Fallback background */
-    backdrop-filter: blur(10px); /* Adds glass effect */
+    backdrop-filter: blur(10px);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -34,36 +35,38 @@
     animation: overlayFadeIn 0.3s ease-out;
   }
   
-  /* Container with futuristic border effect */
+  /* Base container styles */
   .call-modal-container {
     position: relative;
-    width: 80%;
-    height: 100%;
     background: rgba(17, 25, 40, 0.8);
-    border-radius: 16px;
-    box-shadow:
-      0 0 20px rgba(81, 131, 254, 0.3),
-      inset 0 0 20px rgba(81, 131, 254, 0.2);
+    border-radius: 1rem;
+    box-shadow: 0 0 20px rgba(81, 131, 254, 0.3),
+                inset 0 0 20px rgba(81, 131, 254, 0.2);
     overflow: hidden;
     animation: containerScale 0.4s ease-out;
     border: 1px solid rgba(81, 131, 254, 0.3);
     transform-style: preserve-3d;
     perspective: 1000px;
     will-change: transform, opacity;
+  
+    /* Default size for mobile */
+    width: 95%;
+    height: 90vh;
+    max-height: 600px;
   }
   
-  /* Futuristic close button */
+  /* Base close button styles */
   .call-close-button {
     position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 40px;
-    height: 40px;
+    top: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
     background: rgba(81, 131, 254, 0.2);
     border: 1px solid rgba(81, 131, 254, 0.5);
     border-radius: 50%;
     color: #5183fe;
-    font-size: 20px;
+    font-size: 1.25rem;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -88,9 +91,8 @@
   .call-close-button:hover {
     transform: translateZ(10px) scale(1.1);
     background: rgba(81, 131, 254, 0.4);
-    box-shadow:
-      0 0 15px rgba(81, 131, 254, 0.5),
-      inset 0 0 10px rgba(81, 131, 254, 0.3);
+    box-shadow: 0 0 15px rgba(81, 131, 254, 0.5),
+                inset 0 0 10px rgba(81, 131, 254, 0.3);
   }
   
   .call-close-button:active {
@@ -102,23 +104,130 @@
     box-shadow: 0 0 10px rgba(81, 131, 254, 0.6);
   }
   
-  /* Modal container content area */
+  .call-box-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2; /* Higher z-index than chat */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  /* Content container */
   .myCallContainer {
     width: 100%;
     height: 90%;
-    border-radius: 16px;
+    border-radius: 1rem;
     overflow: hidden;
     animation: contentFadeIn 0.5s ease-out;
     will-change: transform, opacity;
   }
   
-  /* Hover effect for container */
-  .call-modal-container:hover {
-    box-shadow:
-      0 0 30px rgba(81, 131, 254, 0.4),
-      inset 0 0 30px rgba(81, 131, 254, 0.3);
-    transform: translateZ(20px);
-    transition: all 0.3s ease;
+  /* Responsive breakpoints */
+  /* Portrait phones and small devices */
+  @media screen and (max-width: 480px) {
+    .call-modal-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      height: 80vh;
+      max-height: 500px;
+      overflow: auto;
+      background: rgba(17, 25, 40, 0.9);
+    }
+  
+    .call-modal-overlay {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(15px);
+    }
+  
+    .call-close-button {
+      width: 2rem;
+      height: 2rem;
+      font-size: 1rem;
+    }
+  }
+  
+  /* Landscape phones and small tablets */
+  @media screen and (min-width: 481px) and (max-width: 768px) {
+    .call-modal-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 85%;
+      height: 85vh;
+      max-height: 550px;
+      overflow: auto;
+      background: rgba(17, 25, 40, 0.9);
+    }
+  
+    .call-modal-overlay {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(15px);
+    }
+  }
+  
+  /* Landscape mode for mobile devices */
+  @media screen and (max-height: 480px) {
+    .call-modal-container {
+      height: 90vh;
+      max-height: none;
+    }
+  
+    .myCallContainer {
+      height: calc(100% - 6rem);
+      width: 60%;
+    }
+  }
+  
+  /* Tablets and small laptops */
+  @media screen and (min-width: 769px) and (max-width: 1024px) {
+    .call-modal-container {
+      width: 85%;
+      height: 85vh;
+      max-height: 700px;
+    }
+  }
+  
+  /* Desktops and large screens */
+  @media screen and (min-width: 1025px) {
+    .call-modal-container {
+      width: 75%;
+      height: 85vh;
+      max-height: 800px;
+    }
+  }
+  
+  /* High-resolution displays */
+  @media screen and (min-width: 1441px) {
+    .call-modal-container {
+      width: 65%;
+      max-width: 1400px;
+    }
   }
   
   /* Animations */
@@ -168,7 +277,7 @@
       rgba(81, 131, 254, 0),
       rgba(81, 131, 254, 0.3)
     );
-    border-radius: 16px;
+    border-radius: 1rem;
     z-index: -1;
     animation: borderGlow 120s linear infinite;
   }
@@ -179,27 +288,6 @@
     }
     100% {
       transform: rotate(360deg);
-    }
-  }
-  
-  /* Responsive design adjustments */
-  @media (max-width: 768px) {
-    .call-modal-container {
-      width: 95%;
-      height: 70%;
-    }
-    
-    .call-close-button {
-      width: 36px;
-      height: 36px;
-      top: 15px;
-      right: 15px;
-    }
-  }
-  
-  @media (max-height: 480px) {
-    .call-modal-container {
-      height: 90%;
     }
   }
   
