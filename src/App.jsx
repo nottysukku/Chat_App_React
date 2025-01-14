@@ -14,7 +14,7 @@ import './index.css';
 
 
 document.addEventListener("DOMContentLoaded", () => {
-  const fixStyle = document.querySelector("head > style:nth-child(70)");
+  const fixStyle = document.querySelector("head > style:nth-child(53)");
 
   if (fixStyle) {
     // Check if an audio style element already exists within the target style
