@@ -34,7 +34,7 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink }) => {
       if (!containerRef.current) return;
 
       const appID = 61116413;
-      const serverSecret = 'cbe97ba543eecb675f41548a17fcf6e7';
+      const serverSecret = import.meta.env.VITE_SERVER_SECRET;
       const userID = randomID(5);
       const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
         appID,
