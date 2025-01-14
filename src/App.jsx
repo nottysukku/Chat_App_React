@@ -13,21 +13,36 @@ import Chatbot from "./components/Chatbot/Chatbot";
 import './index.css';
 
 
-const fixStyle = document.querySelector("head > style:nth-child(70)");
-if (fixStyle) {
-  const audioStyle = document.createElement("style");
-  const isDesktop = window.innerWidth >= 1024;
-  audioStyle.innerHTML = `
-    audio {
-      width: 200px !important;
-      height: 25px !important;
-      position: absolute;
-      top: -20px;
-      ${isDesktop ? 'right: 100px;' : ''}
+document.addEventListener("DOMContentLoaded", () => {
+  const fixStyle = document.querySelector("head > style:nth-child(70)");
+
+  if (fixStyle) {
+    // Check if an audio style element already exists within the target style
+    let audioStyle = fixStyle.querySelector("#audio-fix-style");
+    if (!audioStyle) {
+      // Create a new <style> for audio fixes if not present
+      audioStyle = document.createElement("style");
+      audioStyle.id = "audio-fix-style";
+      fixStyle.appendChild(audioStyle);
     }
-  `;
-  fixStyle.appendChild(audioStyle);
-}
+
+    const isDesktop = window.innerWidth >= 1024;
+
+    // Apply or update the audio style rules
+    audioStyle.innerHTML = `
+      audio {
+        width: 200px !important;
+        height: 25px !important;
+        position: absolute !important;
+        top: -20px !important;
+        ${isDesktop ? 'right: 100px !important;' : ''}
+      }
+    `;
+  } else {
+    console.warn("Target style not found: head > style:nth-child(70)");
+  }
+});
+
 
 
 const App = () => {
