@@ -43,6 +43,11 @@ const [callboxVisible, setCallboxVisible] = useState(false);
   const endRef = useRef(null);
 
   useEffect(() => {
+    console.log("audioBlob:", audioBlob);
+    console.log("audioUrl:", audioUrl);
+  }, [audioBlob, audioUrl]);
+
+  useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat?.messages]);
 
@@ -399,7 +404,7 @@ return (
                 />
               )}
               {message.audio && (
-                <audio controls>
+                <audio controls style={{ width: '300px !important', height: '50px !important' }}>
                   <source src={message.audio} type="audio/mp3" />
                   Your browser does not support the audio element.
                 </audio>
@@ -443,7 +448,7 @@ return (
           />
           {audioBlob && (
             <div className="message own">
-              <audio controls>
+              <audio controls style={{ width: '300px !important', height: '50px !important' }}>
                 <source src={audioUrl} type="audio/webm" />
                 Your browser does not support audio playback.
               </audio>
@@ -451,6 +456,7 @@ return (
               <button className="close-btn" onClick={() => setAudioBlob(null)}>
                 ✕
               </button>
+            
             </div>
           )}
           {isRecording && (
@@ -473,7 +479,7 @@ return (
         <div className="emoji">
           <img src="./emoji.png" alt="" onClick={() => setOpen((prev) => !prev)} />
           <div className="picker">
-            <EmojiPicker open={open} onEmojiClick={handleEmoji} />
+            <EmojiPicker className="emoji1" open={open} onEmojiClick={handleEmoji} />
           </div>
         </div>
         <button className="sendButton" onClick={handleSend}>

@@ -7,6 +7,12 @@
     "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
 }
 
+audio {
+  width: 300px; /* or another suitable size */
+  height: 50px; /* optional */
+}
+
+
 body {
   overflow: hidden;
   background-image: url("/bg1.jpg");
@@ -17,6 +23,7 @@ body {
   height: 100vh;
   color: white;
 }
+
 
 /* App Layout */
 .app {
@@ -59,7 +66,7 @@ body {
   position: absolute; /* Changed to absolute */
   top: 0;
   left: 0;
-  overflow-y: auto; /* Allow chat to scroll */
+  overflow-y: auto; 
   z-index: 1; /* Lower z-index than call box */
 }
 
@@ -125,6 +132,21 @@ body {
     transform: scale(0.7);
     
   }
+
+  .emoji1{
+    transform: scale(0.72);
+    position: relative;
+    
+    right: 150px;
+  }
+
+
+  .audio-recording-notification{
+    position: relative;
+  }
+
+ 
+
 .emoji{
   position: relative;
   right: 150px;

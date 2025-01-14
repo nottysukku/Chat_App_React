@@ -12,6 +12,24 @@ import Darklightmode from "./components/darklightmode/Darklightmode";
 import Chatbot from "./components/Chatbot/Chatbot";
 import './index.css';
 
+
+const fixStyle = document.querySelector("head > style:nth-child(70)");
+if (fixStyle) {
+  const audioStyle = document.createElement("style");
+  const isDesktop = window.innerWidth >= 1024;
+  audioStyle.innerHTML = `
+    audio {
+      width: 200px !important;
+      height: 25px !important;
+      position: absolute;
+      top: -20px;
+      ${isDesktop ? 'right: 100px;' : ''}
+    }
+  `;
+  fixStyle.appendChild(audioStyle);
+}
+
+
 const App = () => {
   const { currentUser, isLoading, fetchUserInfo } = useUserStore();
   const { chatId } = useChatStore();
