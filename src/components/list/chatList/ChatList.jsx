@@ -5,15 +5,14 @@ import { useUserStore } from "../../../lib/userStore";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
-import { toast } from "react-toastify";
 
 const ChatList = () => {
   const [chats, setChats] = useState([]);
-  const [addMode, setAddMode] = useState(false);  // AddMode state to control AddUser visibility
+  const [addMode, setAddMode] = useState(false);
   const [input, setInput] = useState("");
 
   const { currentUser } = useUserStore();
-  const { chatId, changeChat } = useChatStore();
+  const { changeChat } = useChatStore();
 
   useEffect(() => {
     const unSub = onSnapshot(
@@ -24,14 +23,11 @@ const ChatList = () => {
         const promises = items.map(async (item) => {
           const userDocRef = doc(db, "users", item.receiverId);
           const userDocSnap = await getDoc(userDocRef);
-
           const user = userDocSnap.data();
-
           return { ...item, user };
         });
 
         const chatData = await Promise.all(promises);
-
         setChats(chatData.sort((a, b) => b.updatedAt - a.updatedAt));
       }
     );
@@ -42,20 +38,24 @@ const ChatList = () => {
   }, [currentUser.id]);
 
   const handleSelect = async (chat) => {
-    const updatedChats = chats.map((item) => {
+    const userChats = chats.map((item) => {
       const { user, ...rest } = item;
-      return { ...rest, isSeen: item.chatId === chat.chatId ? true : item.isSeen };
+      return rest;
     });
+
+    const chatIndex = userChats.findIndex(
+      (item) => item.chatId === chat.chatId
+    );
+
+    userChats[chatIndex].isSeen = true;
 
     const userChatsRef = doc(db, "userchats", currentUser.id);
 
     try {
-      await updateDoc(userChatsRef, {
-        chats: updatedChats,
-      });
+      await updateDoc(userChatsRef, { chats: userChats });
       changeChat(chat.chatId, chat.user);
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
   };
 
@@ -67,7 +67,7 @@ const ChatList = () => {
     <div className="chatList">
       <div className="search">
         <div className="searchBar">
-          <img src="./search.png" alt="" />
+          <img src="./search.png" alt="Search" />
           <input
             type="text"
             placeholder="Search"
@@ -76,28 +76,31 @@ const ChatList = () => {
         </div>
         <img
           src={addMode ? "./minus.png" : "./plus.png"}
-          alt=""
+          alt="Toggle Add User"
           className="add"
           onClick={() => setAddMode((prev) => !prev)}
         />
       </div>
       {filteredChats.map((chat) => (
         <div
-          className={`item ${chat.chatId === chatId ? 'selected' : ''}`}
+          className="item"
           key={chat.chatId}
           onClick={() => handleSelect(chat)}
+          style={{
+            backgroundColor: chat?.isSeen ? "transparent" : "#5183fe",
+          }}
         >
           <img
             src={
-              chat.user.blocked.includes(currentUser.id)
+              chat.user.blocked?.includes(currentUser.id)
                 ? "./avatar2.png"
                 : chat.user.avatar || "./avatar2.png"
             }
-            alt=""
+            alt="Avatar"
           />
           <div className="texts">
             <span>
-              {chat.user.blocked.includes(currentUser.id)
+              {chat.user.blocked?.includes(currentUser.id)
                 ? "User"
                 : chat.user.username}
             </span>
@@ -106,7 +109,7 @@ const ChatList = () => {
         </div>
       ))}
 
-      {addMode && <AddUser setAddMode={setAddMode} />} {/* Pass setAddMode */}
+      {addMode && <AddUser setAddMode={setAddMode} />}
     </div>
   );
 };

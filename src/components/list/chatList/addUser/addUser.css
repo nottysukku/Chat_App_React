@@ -98,3 +98,16 @@
   margin-top: 10px;
   text-align: center;
 }
+
+.cross{
+  display: none;
+}
+
+@media(max-width:600px){
+
+  .cross{
+    display: block;
+    position: relative;
+right: -160px;
+  }
+}
