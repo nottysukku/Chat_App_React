@@ -8,7 +8,7 @@ import "./detail.css";
 import { toast } from "react-toastify";
 
 const Detail = () => {
-  const { chat, chatId, user, isCurrentUserBlocked, isReceiverBlocked, changeBlock, resetChat } = useChatStore();
+  const { chat,receiverId, chatId, user, isCurrentUserBlocked, isReceiverBlocked, changeBlock, resetChat } = useChatStore();
   const { currentUser } = useUserStore();
  
   const [showPhotos, setShowPhotos] = useState(true);

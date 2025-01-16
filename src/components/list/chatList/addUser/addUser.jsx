@@ -51,18 +51,33 @@ const AddUser = ({ setAddMode }) => {
         messages: [],
       });
 
-      const chatData = {
-        chatId: newChatRef.id,
-        lastMessage: "",
-        receiverId: currentUser.id,
-        updatedAt: Date.now(),
-      };
+     
 
       await updateDoc(doc(userChatsRef, user.id), {
-        chats: arrayUnion(chatData),
+        chats: arrayUnion({
+
+          chatId: newChatRef.id,
+
+          lastMessage: "",
+
+          receiverId: currentUser.id,
+
+          updatedAt: Date.now(),
+
+        }),
       });
       await updateDoc(doc(userChatsRef, currentUser.id), {
-        chats: arrayUnion(chatData),
+        chats: arrayUnion({
+
+          chatId: newChatRef.id,
+
+          lastMessage: "",
+
+          receiverId: user.id,
+
+          updatedAt: Date.now(),
+
+        }),
       });
 
       toast.success("Chat created successfully!");

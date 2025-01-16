@@ -379,7 +379,7 @@ return (
             <p>{user?.status || "Hey! I'm using Chatapp"}</p>
           </div>
         </div>
-        <div className="icons">
+        <div className="icons"> 
           <img id="linked" onClick={handleLinkedin1} src="./phone.png" alt="" />
           <img id="linked" onClick={handleLinkedin2} src="./video.png" alt="" />
           {/* <img id="linked" src="./info.png" onClick={() => window.open("https://www.linkedin.com/in/sukrit-chopra-5923a9215/")} alt="" /> */}
