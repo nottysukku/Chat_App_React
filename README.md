@@ -7,6 +7,7 @@
 - 🎉 **Media Sharing**: Share images and files effortlessly.  
 - 🔒 **Secure Conversations**: Enjoy end-to-end encrypted communication for peace of mind.  
 - 👥 **Group Chat Support**: Connect with friends, family, or colleagues all at once.  
+- 🎞 **Linkedin Video**: https://www.linkedin.com/posts/sukrit-chopra-5923a9215_reactjs-chatapp-firebase-activity-7285317317276712961-sZSi?utm_source=share&utm_medium=member_desktop&rcm=ACoAADZXXf4B6vuphveugSyfCD6ROy8TUfqxlng
 
 ---
 
