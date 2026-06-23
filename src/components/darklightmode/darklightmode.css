@@ -1,7 +1,18 @@
-body{
-    height: 910px;
+.wa-theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 150ms ease;
+  width: 40px;
+  height: 40px;
 }
 
-.switch{
-    width: 2px;
+.wa-theme-toggle:hover {
+  background-color: var(--bg-hover);
 }

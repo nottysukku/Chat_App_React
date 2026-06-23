@@ -1,214 +1,173 @@
-/* Default styles */
-.chatList {
+.wa-chatlist {
   flex: 1;
-  overflow: scroll;
-  border: 1px solid #25D366;
-  border-radius: 20px;
-}
-
-.search {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 20px;
-}
-
-.searchBar {
-  flex: 1;
-  background-color: rgba(17, 25, 40, 0.5);
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  border-radius: 10px;
-  padding: 10px;
-}
-
-input {
-  background-color: transparent;
-  border: none;
-  outline: none;
-  color: white;
-  flex: 1;
-}
-
-img {
-  width: 20px;
-  height: 20px;
-}
-
-.add {
-  width: 36px;
-  height: 36px;
-  background-color: rgba(17, 25, 40, 0.5);
-  padding: 10px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.item {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 20px;
-  cursor: pointer;
-  border-bottom: 1px solid #dddddd35;
-  transition: background-color 0.3s ease;
-}
-
-/* Hover effect */
-.item:hover {
-  background-color: rgba(81, 131, 254, 0.2);
-}
-
-.item.selected {
-  background-color: #5183fe !important;
-}
-
-.item img {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.texts {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  overflow: hidden;
 }
 
-.texts span {
-  font-weight: 500;
+/* Search Wrapper */
+.wa-chatlist__search-wrapper {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--bg-primary);
+  gap: 8px;
 }
 
-.texts p {
+.wa-chatlist__search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background-color: var(--bg-input);
+  border-radius: var(--radius-md);
+  padding: 0 12px;
+  height: 36px;
+}
+
+.wa-chatlist__search-icon {
   font-size: 14px;
-  font-weight: 300;
+  margin-right: 10px;
+  opacity: 0.6;
+  flex-shrink: 0;
 }
 
-/* Responsive Styles */
-
-/* For screens larger than 1024px (desktop or larger tablets) */
-@media (min-width: 1024px) {
-  .search {
-    gap: 30px;
-    padding: 20px 40px;
-  }
-
-  .searchBar {
-    padding: 12px 20px;
-  }
-
-  .add {
-    width: 40px;
-    height: 40px;
-  }
-
-  .item {
-    padding: 25px 30px;
-  }
+.wa-chatlist__search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
 }
 
-/* For screens smaller than 1024px and larger than 768px (tablet to small tablet screens) */
-@media (max-width: 1024px) and (min-width: 768px) {
-  .search {
-    gap: 20px;
-    padding: 20px;
-  }
-
-  .searchBar {
-    padding: 12px 18px;
-  }
-
-  .add {
-    width: 36px;
-    height: 36px;
-  }
-
-  .item {
-    padding: 20px 25px;
-  }
-
-  .texts span {
-    font-size: 16px;
-  }
-
-  .texts p {
-    font-size: 13px;
-  }
+.wa-chatlist__search-input::placeholder {
+  color: var(--text-tertiary);
 }
 
-/* For screens smaller than 768px (mobile and small tablets) */
-@media (max-width: 768px) {
-  .search {
-    flex-direction: column;
-    gap: 15px;
-    padding: 10px;
-  }
-
-  .searchBar {
-    flex-direction: row;
-    padding: 10px;
-  }
-
-  .add {
-    width: 40px;
-    height: 40px;
-  }
-
-  .item {
-    padding: 15px 20px;
-    gap: 15px;
-  }
-
-  .item img {
-    width: 40px;
-    height: 40px;
-  }
-
-  .texts span {
-    font-size: 14px;
-  }
-
-  .texts p {
-    font-size: 12px;
-  }
-
-  .text {
-    font-size: 14px;
-  }
+.wa-chatlist__new-chat-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  font-size: 18px;
+  transition: background-color var(--transition-fast);
+  flex-shrink: 0;
 }
 
-/* For screens smaller than 480px (small mobile screens) */
-@media (max-width: 480px) {
-  .search {
-    padding: 10px;
-  }
+.wa-chatlist__new-chat-btn:hover {
+  background-color: var(--bg-hover);
+}
 
-  .searchBar {
-    padding: 8px;
-  }
+/* Chat Items Container */
+.wa-chatlist__items {
+  flex: 1;
+  overflow-y: auto;
+}
 
-  .add {
-    width: 35px;
-    height: 35px;
-  }
+/* Individual Chat Item */
+.wa-chatlist__item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-light);
+  transition: background-color var(--transition-fast);
+  gap: 14px;
+}
 
-  .item {
-    padding: 12px 15px;
-    gap: 10px;
-  }
+.wa-chatlist__item:hover {
+  background-color: var(--bg-hover);
+}
 
-  .item img {
-    width: 35px;
-    height: 35px;
-  }
+.wa-chatlist__item--unread {
+  background-color: rgba(0, 168, 132, 0.04);
+}
 
-  .texts span {
-    font-size: 12px;
-  }
+.wa-chatlist__item--unread:hover {
+  background-color: rgba(0, 168, 132, 0.08);
+}
 
-  .texts p {
-    font-size: 11px;
-  }
+/* Avatar */
+.wa-chatlist__avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+/* Content Area */
+.wa-chatlist__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wa-chatlist__top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wa-chatlist__username {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wa-chatlist__item--unread .wa-chatlist__username {
+  font-weight: 600;
+}
+
+.wa-chatlist__time {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.wa-chatlist__item--unread .wa-chatlist__time {
+  color: var(--text-green);
+}
+
+.wa-chatlist__bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wa-chatlist__last-message {
+  font-size: 14px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.wa-chatlist__item--unread .wa-chatlist__last-message {
+  color: var(--text-primary);
+}
+
+/* Unread Dot Indicator */
+.wa-chatlist__unread-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  background-color: var(--wa-green);
+  flex-shrink: 0;
+  margin-left: 8px;
 }

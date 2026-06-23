@@ -1,0 +1,339 @@
+/* ===== WhatsApp-Style Stories/Status Panel Styling ===== */
+
+.wa-stories__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: wa-fadeIn 200ms ease;
+}
+
+.wa-stories__container {
+  width: 420px;
+  max-width: 95vw;
+  height: 600px;
+  max-height: 85vh;
+  background-color: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.wa-stories__header {
+  background-color: var(--wa-dark-green);
+  color: white;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wa-stories__header h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wa-stories__close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 150ms;
+}
+
+.wa-stories__close:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.wa-stories__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Add Status Form */
+.wa-stories__add-form {
+  background-color: var(--bg-secondary);
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.wa-stories__form-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.wa-stories__input {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  outline: none;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
+.wa-stories__file-label {
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+}
+
+.wa-stories__file-label:hover {
+  background-color: var(--bg-hover);
+}
+
+.wa-stories__submit {
+  background-color: var(--wa-green);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background var(--transition-fast);
+}
+
+.wa-stories__submit:hover {
+  background-color: var(--wa-teal);
+}
+
+.wa-stories__file-preview {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wa-stories__file-preview button {
+  background: none;
+  border: none;
+  color: red;
+  cursor: pointer;
+}
+
+/* Sections */
+.wa-stories__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wa-stories__section h4 {
+  font-size: 13.5px;
+  color: var(--text-green);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 4px;
+}
+
+.wa-stories__no-status {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.wa-stories__item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 8px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast);
+}
+
+.wa-stories__item:hover {
+  background-color: var(--bg-hover);
+}
+
+.wa-stories__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  border: 2px solid transparent;
+}
+
+.wa-stories__avatar--active {
+  border-color: var(--wa-green);
+  padding: 1.5px;
+}
+
+.wa-stories__info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wa-stories__info span {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.wa-stories__info p {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ===== Fullscreen Story Viewer Modal ===== */
+.wa-stories__viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: #0b141a;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wa-stories__viewer-container {
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  max-height: 800px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: black;
+}
+
+.wa-stories__viewer-progress-container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  height: 4px;
+  background-color: rgba(255, 255, 255, 0.35);
+  border-radius: 2px;
+  overflow: hidden;
+  z-index: 2100;
+}
+
+.wa-stories__viewer-progress {
+  height: 100%;
+  background-color: white;
+  width: 0;
+  transition: width 50ms linear;
+}
+
+.wa-stories__viewer-header {
+  position: absolute;
+  top: 24px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
+  z-index: 2100;
+}
+
+.wa-stories__viewer-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wa-stories__viewer-user img {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.wa-stories__viewer-user span {
+  font-weight: 600;
+  font-size: 14.5px;
+}
+
+.wa-stories__viewer-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.wa-stories__viewer-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.wa-stories__viewer-image-box {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.wa-stories__viewer-image-box img {
+  max-width: 100%;
+  max-height: 80%;
+  object-fit: contain;
+}
+
+.wa-stories__viewer-caption {
+  color: white;
+  text-align: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.4);
+  position: absolute;
+  bottom: 40px;
+  left: 0;
+  right: 0;
+  font-size: 15px;
+}
+
+.wa-stories__viewer-text-box {
+  color: white;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 550;
+  padding: 30px;
+  background-color: #075E54;
+  width: 100%;
+  height: 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  line-height: 1.5;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes wa-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

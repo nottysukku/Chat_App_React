@@ -1,136 +1,97 @@
-import React, { useState, useCallback } from "react";
-import Modal from "react-modal";
-import {
-  MainContainer,
-  ChatContainer,
-  MessageList,
-  Message,
-  MessageInput,
-  TypingIndicator
-} from "@chatscope/chat-ui-kit-react";
-import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
-import { MessageCircle } from "lucide-react";
-import OpenAI from "openai";
-import "./chatbot.css";
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import './chatbot.css';
 
-Modal.setAppElement("#root");
-const openai = new OpenAI({
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-    dangerouslyAllowBrowser: true
-});
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 
-
-const Chatbot = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+const Chatbot = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
-    {
-      message: "Hello, I'm ChatGPT! Ask me anything!",
-      sentTime: "just now",
-      sender: "ChatGPT"
-    }
+    { role: 'assistant', content: "Hello! I'm your AI assistant powered by Gemini. Ask me anything!" }
   ]);
+  const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const handleSend = useCallback(async (message) => {
-    if (!message.trim()) return;
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-    const newMessage = {
-      message,
-      direction: "outgoing",
-      sender: "user",
-      sentTime: new Date().toLocaleTimeString()
-    };
+  const handleSend = useCallback(async () => {
+    if (!input.trim()) return;
 
-    const updatedMessages = [...messages, newMessage];
+    const userMessage = { role: 'user', content: input };
+    const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
+    setInput('');
     setIsTyping(true);
 
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: updatedMessages.map((msg) => ({
-          role: msg.sender === "ChatGPT" ? "assistant" : "user",
-          content: msg.message
-        }))
+      const response = await fetch(GEMINI_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: updatedMessages.map(msg => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+          }))
+        })
       });
 
-      const assistantMessage = response.choices[0]?.message?.content || "Sorry, I couldn't understand your message.";
-      setMessages([
-        ...updatedMessages,
-        {
-          message: assistantMessage,
-          sender: "ChatGPT",
-          sentTime: new Date().toLocaleTimeString()
-        }
-      ]);
+      const data = await response.json();
+      const assistantMessage = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+      
+      setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
     } catch (error) {
-      console.error("Error processing message:", error);
-      setMessages([
-        ...updatedMessages,
-        {
-          message: "Sorry, there was an error processing your message.",
-          sender: "ChatGPT",
-          sentTime: new Date().toLocaleTimeString()
-        }
-      ]);
+      console.error('Gemini API error:', error);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, there was an error. Please try again.' }]);
     } finally {
       setIsTyping(false);
     }
-  }, [messages]);
+  }, [input, messages]);
+
+  if (!isOpen) return null;
 
   return (
-    <div className="chatbot-container">
-      <button
-        className="chatbot-trigger"
-        onClick={() => setIsModalOpen(true)}
-        aria-label="Open chat"
-      >
-        <MessageCircle className="chatbot-icon" />
-      </button>
-
-      <Modal
-        isOpen={isModalOpen}
-        onRequestClose={() => setIsModalOpen(false)}
-        className="chatbot-modal"
-        overlayClassName="chatbot-overlay"
-        
-      >
-        <div className="modal-content1">
-          <div className="modal-header">
-            <div className="header-content">
-              <div className="status-indicator"></div>
-              <h2>AI Assistant</h2>
-            </div>
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="close-button"
-              aria-label="Close chat"
-            >
-              ×
-            </button>
+    <div className="wa-chatbot__overlay">
+      <div className="wa-chatbot__container">
+        <div className="wa-chatbot__header">
+          <div className="wa-chatbot__header-info">
+            <div className="wa-chatbot__status-dot"></div>
+            <h3>Gemini AI Assistant</h3>
           </div>
-
-          <div className="chat-container">
-            <MainContainer>
-              <ChatContainer>
-                <MessageList
-                  scrollBehavior="smooth"
-                  typingIndicator={isTyping ? <TypingIndicator content="AI is thinking..." /> : null}
-                >
-                  {messages.map((message, i) => (
-                    <Message key={i} model={message} />
-                  ))}
-                </MessageList>
-                <MessageInput
-                  placeholder="Type your message here..."
-                  onSend={handleSend}
-                  attachButton={false}
-                />
-              </ChatContainer>
-            </MainContainer>
-          </div>
+          <button className="wa-chatbot__close" onClick={onClose}>✕</button>
         </div>
-      </Modal>
+        <div className="wa-chatbot__messages">
+          {messages.map((msg, i) => (
+            <div key={i} className={`wa-chatbot__msg ${msg.role === 'user' ? 'wa-chatbot__msg--user' : 'wa-chatbot__msg--bot'}`}>
+              <div className="wa-chatbot__bubble">
+                {msg.content}
+              </div>
+            </div>
+          ))}
+          {isTyping && (
+            <div className="wa-chatbot__msg wa-chatbot__msg--bot">
+              <div className="wa-chatbot__bubble wa-chatbot__typing">
+                <span></span><span></span><span></span>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        <div className="wa-chatbot__input-area">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSend(); }}
+            placeholder="Ask Gemini anything..."
+            className="wa-chatbot__input"
+          />
+          <button onClick={handleSend} className="wa-chatbot__send" disabled={!input.trim() || isTyping}>
+            ➤
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

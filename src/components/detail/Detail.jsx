@@ -6,10 +6,11 @@ import { useUserStore } from "../../lib/userStore";
 import { saveAs } from 'file-saver';
 import "./detail.css";
 import { toast } from "react-toastify";
+import { localDb } from "../../lib/localDb";
 
 const Detail = () => {
   const { chat,receiverId, chatId, user, isCurrentUserBlocked, isReceiverBlocked, changeBlock, resetChat } = useChatStore();
-  const { currentUser } = useUserStore();
+  const { currentUser, isLocalMode } = useUserStore();
  
   const [showPhotos, setShowPhotos] = useState(true);
   const [sharedPhotos, setSharedPhotos] = useState([]);
@@ -31,6 +32,24 @@ const Detail = () => {
       setError(null);
 
       try {
+        if (isLocalMode) {
+          const chats = localDb.query("SELECT * FROM chats WHERE id = ?", [chatId]);
+          const chatData = chats[0];
+          if (chatData) {
+            const photos = chatData.messages
+              ?.filter((message) => message.img)
+              .map((message, index) => ({
+                id: index,
+                url: message.img,
+                name: message.fileName || `photo_${index + 1}.png`,
+              }));
+            setSharedPhotos(photos || []);
+          } else {
+            setSharedPhotos([]);
+          }
+          return;
+        }
+
         const chatDocRef = doc(db, "chats", chatId);
         const chatDocSnap = await getDoc(chatDocRef);
 
@@ -57,7 +76,7 @@ const Detail = () => {
     };
 
     fetchPhotos();
-  }, [chatId]);
+  }, [chatId, isLocalMode]);
 
   const handleDownload = (photo) => {
     saveAs(photo.url, photo.name);
@@ -65,6 +84,26 @@ const Detail = () => {
 
   const handleBlock = async () => {
     if (!user) return;
+
+    if (isLocalMode) {
+      const users = localDb._getTable("users");
+      const currentUserIndex = users.findIndex(u => u.id === currentUser.id);
+      if (currentUserIndex > -1) {
+        const isBlocked = currentUser.blocked.includes(user.id);
+        if (isBlocked) {
+          users[currentUserIndex].blocked = users[currentUserIndex].blocked.filter(id => id !== user.id);
+        } else {
+          users[currentUserIndex].blocked.push(user.id);
+        }
+        localDb._setTable("users", users);
+
+        currentUser.blocked = users[currentUserIndex].blocked;
+        localStorage.setItem("local_current_user", JSON.stringify(currentUser));
+      }
+      changeBlock();
+      setShowBlockModal(false);
+      return;
+    }
 
     const userDocRef = doc(db, "users", currentUser.id);
 
@@ -85,6 +124,20 @@ const Detail = () => {
       return;
     }
   
+    if (isLocalMode) {
+      const userChats = localDb.getUserChats(currentUser.id).filter(c => c.chatId !== chatId);
+      localDb.updateUserChats(currentUser.id, userChats);
+
+      const receiverChats = localDb.getUserChats(user.id).filter(c => c.chatId !== chatId);
+      localDb.updateUserChats(user.id, receiverChats);
+
+      localDb.query("DELETE FROM chats WHERE id = ?", [chatId]);
+      
+      toast.success("Chat deleted successfully.");
+      resetChat();
+      return;
+    }
+
     try {
       const userChatsDocRef = doc(db, "userchats", currentUser.id);
       const userChatsDocSnap = await getDoc(userChatsDocRef);
@@ -137,6 +190,7 @@ const Detail = () => {
   
       toast.success("Chat deleted successfully.");
       console.log("Chat deleted successfully.");
+      resetChat();
     } catch (err) {
       console.error("Error deleting chat:", err);
       toast.error("Failed to delete the chat. Please try again later.");
@@ -153,7 +207,15 @@ const Detail = () => {
   };
 
   const handleLogout = () => {
+    if (isLocalMode) {
+      const { logoutGuest } = useUserStore.getState();
+      logoutGuest();
+      resetChat();
+      setShowLogoutModal(false);
+      return;
+    }
     auth.signOut();
+    resetChat();
     setShowLogoutModal(false);
   };
 

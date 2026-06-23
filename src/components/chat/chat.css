@@ -1,421 +1,480 @@
-audio {
-  width: 300px; /* or another suitable size */
-  height: 50px; /* optional */
-}
-/* Animation for mic when recording */
-@keyframes micAnimation {
-  0% {
-    filter: brightness(1);
-    transform: scale(1);
-  }
-  50% {
-    filter: brightness(0.5) hue-rotate(180deg);
-    transform: scale(1.2);
-  }
-  100% {
-    filter: brightness(1);
-    transform: scale(1);
-  }
+/* ===== WhatsApp-Style Chat Panel Styling (BEM) ===== */
+
+.wa-chat {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-chat);
+  position: relative;
+  border-left: 1px solid var(--border-color);
 }
 
-/* Notification for audio recording status */
-.audio-recording-notification {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 10px 20px;
-  background-color: #ffab00;
-  color: #fff;
-  border-radius: 5px;
-  font-weight: bold;
+/* ===== Header ===== */
+.wa-chat__header {
+  height: 60px;
+  padding: 10px 16px;
+  background-color: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
   z-index: 10;
 }
 
-.audio-timer {
-  margin-top: 5px;
-  font-size: 18px;
-  color: #fff;
-  font-weight: normal;
+.wa-chat__header-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
 }
 
-/* Animation to show and hide the recording notification */
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  50% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-}
-
-/* Close button style for the audio message preview */
-.close-btn {
-  position: relative;
-  top: 5px;
-  right: 5px;
+.wa-chat__back-btn {
   background: none;
   border: none;
-  font-size: 18px;
+  font-size: 20px;
+  color: var(--text-primary);
   cursor: pointer;
-  color: #ff0000;
+  padding: 6px;
+  margin-right: 8px;
+  border-radius: var(--radius-full);
+  display: none; /* Hidden on desktop */
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast);
 }
 
-.close-btn:hover {
-  color: #cc0000;
+.wa-chat__back-btn:hover {
+  background-color: var(--bg-hover);
 }
 
-/* Modal Overlay */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+.wa-chat__header-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.wa-chat__header-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.wa-chat__header-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.wa-chat__header-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 250px;
+}
+
+.wa-chat__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.wa-chat__icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background-color var(--transition-fast);
+  color: var(--text-secondary);
+}
+
+.wa-chat__icon-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.wa-chat__icon-btn img {
+  width: 20px;
+  height: 20px;
+  filter: var(--icon-filter); /* Adapt to theme */
+}
+
+/* Adapt icons color for dark/light mode */
+:root {
+  --icon-filter: invert(80%) sepia(10%) saturate(200%) hue-rotate(180deg);
+}
+html.light {
+  --icon-filter: invert(30%) sepia(5%) saturate(100%) hue-rotate(180deg);
+}
+
+/* ===== Messages Feed ===== */
+.wa-chat__messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 5%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: var(--bg-chat-pattern);
+  position: relative;
+  /* WhatsApp Doodle Background Pattern simulation using CSS */
+  background-image: radial-gradient(var(--border-light) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+.wa-chat__message {
+  display: flex;
+  flex-direction: column;
+  max-width: 65%;
+  align-self: flex-start;
+  position: relative;
+}
+
+.wa-chat__message--own {
+  align-self: flex-end;
+}
+
+.wa-chat__bubble {
+  padding: 8px 12px 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: 14.2px;
+  line-height: 1.45;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  word-break: break-word;
+}
+
+.wa-chat__message--own .wa-chat__bubble {
+  background-color: var(--bubble-outgoing);
+  border-top-right-radius: 2px;
+}
+
+.wa-chat__message:not(.wa-chat__message--own) .wa-chat__bubble {
+  background-color: var(--bubble-incoming);
+  border-top-left-radius: 2px;
+}
+
+.wa-chat__bubble-img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  object-fit: cover;
+  display: block;
+}
+
+.wa-chat__bubble-audio {
+  display: block;
+  margin-bottom: 4px;
+  max-width: 100%;
+}
+
+.wa-chat__text {
+  color: var(--text-primary);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.wa-chat__time {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  display: block;
+  text-align: right;
+  line-height: 1;
+}
+
+/* Delete dropdown */
+.wa-chat__dropdown {
+  position: absolute;
+  right: -5px;
+  top: -20px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.wa-chat__dropdown-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.wa-chat__dropdown-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.wa-chat__preview-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+  display: block;
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* ===== Input Bar ===== */
+.wa-chat__input {
+  min-height: 62px;
+  padding: 8px 16px;
+  background-color: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+  border-top: 1px solid var(--border-color);
+}
+
+.wa-chat__input-icons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wa-chat__text-input {
+  flex: 1;
+  height: 42px;
+  background-color: var(--bg-input);
+  border: none;
+  outline: none;
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  color: var(--text-primary);
+  font-size: 14.5px;
+  font-family: inherit;
+}
+
+.wa-chat__text-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.wa-chat__emoji {
+  position: relative;
+}
+
+.wa-chat__emoji-picker {
+  position: absolute;
+  bottom: 50px;
+  right: 0;
   z-index: 999;
 }
 
-/* Modal Box */
-.modal-box {
-  color: black;
-  background: white;
-  padding: 20px 40px;
-  border-radius: 10px;
-  text-align: center;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-}
-
-/* Modal Actions */
-.modal-actions {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-}
-
-.yes-btn,
-.no-btn {
-  padding: 10px 20px;
+.wa-chat__send-btn {
+  width: 42px;
+  height: 42px;
+  background-color: var(--wa-green);
+  border-radius: var(--radius-full);
   border: none;
-  border-radius: 5px;
+  color: white;
   cursor: pointer;
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
-.yes-btn {
-  background-color: #f44336;
+.wa-chat__send-btn:hover:not(:disabled) {
+  background-color: var(--wa-teal);
+  transform: scale(1.05);
+}
+
+.wa-chat__send-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.wa-chat__send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== Audio Recording UI ===== */
+.wa-chat__recording-bar {
+  position: absolute;
+  bottom: 80px;
+  left: 20px;
+  background-color: var(--wa-green);
+  color: white;
+  padding: 10px 18px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-md);
+  z-index: 20;
+}
+
+.wa-chat__recording-dot {
+  width: 10px;
+  height: 10px;
+  background-color: red;
+  border-radius: var(--radius-full);
+  animation: wa-pulse 1.2s infinite;
+}
+
+.wa-chat__recording-text {
+  font-size: 13.5px;
+  font-weight: 550;
+}
+
+.wa-chat__recording-timer {
+  font-family: monospace;
+  font-size: 13.5px;
+}
+
+.wa-chat__audio-preview {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 12px 16px;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 20;
+}
+
+.wa-chat__audio-player {
+  height: 36px;
+}
+
+.wa-chat__audio-send {
+  background-color: var(--wa-green);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color var(--transition-fast);
+}
+
+.wa-chat__audio-send:hover {
+  background-color: var(--wa-teal);
+}
+
+.wa-chat__audio-discard {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.wa-chat__audio-discard:hover {
+  color: red;
+}
+
+/* ===== Modals ===== */
+.wa-chat__modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.wa-chat__modal {
+  background-color: var(--bg-primary);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  width: 340px;
+  max-width: 90vw;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  animation: wa-scaleIn 180ms ease-out;
+}
+
+.wa-chat__modal-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.wa-chat__modal-text {
+  font-size: 14.5px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.wa-chat__modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wa-chat__modal-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color var(--transition-fast);
+}
+
+.wa-chat__modal-btn--cancel {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.wa-chat__modal-btn--cancel:hover {
+  background-color: var(--bg-hover);
+}
+
+.wa-chat__modal-btn--danger {
+  background-color: red;
   color: white;
 }
 
-.no-btn {
-  background-color: #ddd;
-  color: black;
+.wa-chat__modal-btn--danger:hover {
+  background-color: #d32f2f;
 }
 
-.no-btn:hover {
-  background-color: #ccc;
+.wa-chat__modal-btn--confirm {
+  background-color: var(--wa-green);
+  color: white;
 }
 
-/* Message container */
-.message {
-  position: relative;
-  padding: 10px;
+.wa-chat__modal-btn--confirm:hover {
+  background-color: var(--wa-teal);
 }
 
-.message:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 10px;
-  transition: background-color 0.3s ease;
+/* ===== Keyframes ===== */
+@keyframes wa-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
 }
 
-/* Delete button */
-.message .delete-btn {
-  display: none;
-  position: absolute;
-  top: 0;
-  right: 0;
-  padding: 5px;
-  cursor: pointer;
-  transition: transform 0.3s ease, opacity 0.3s ease;
+@keyframes wa-scaleIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
-/* Show delete button only when hovering or focusing on message (default for desktop) */
-.message:hover .delete-btn,
-.message.own:focus-within .delete-btn {
-  display: block;
-  transform: scale(0.7);
-  opacity: 0.8;
-}
-
-/* Delete button hover effect */
-.message .delete-btn:hover {
-  transform: scale(1);
-  opacity: 1;
-}
-
-/* For own messages, position the delete button to the right */
-.message.own .dropdown {
-  right: 10px;
-}
-
-/* Dropdown positioning for the delete button */
-.message .dropdown {
-  position: absolute;
-  top: 0;
-  right: 0;
-  transform: scale(0.8);
-  background-color: white;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  z-index: 10;
-}
-
-/* Chat section layout */
-.chat {
-  flex: 2;
-  border: 1px solid #25D366;
-  border-radius: 20px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.top {
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid #dddddd35;
-  border-radius: 20px;
-}
-
-.user {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-
-  img {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
-  .texts {
+/* ===== Responsive styles for chat layout ===== */
+@media (max-width: 768px) {
+  .wa-chat__back-btn {
     display: flex;
-    flex-direction: column;
-    gap: 5px;
-
-    span {
-      font-size: 18px;
-      font-weight: bold;
-    }
-
-    p {
-      font-size: 14px;
-      font-weight: 300;
-      color: #a5a5a5;
-    }
   }
-}
-
-.icons {
-  display: flex;
-  gap: 20px;
-
-  img {
-    width: 20px;
-    height: 20px;
-  }
-}
-
-.center {
-  border: 1px solid #25D366;
-  border-radius: 20px;
-  padding: 20px;
-  flex: 1;
-  overflow: scroll;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.message {
-  max-width: 70%;
-  display: flex;
-  gap: 20px;
-
-  &.own {
-    align-self: flex-end;
-
-    .texts {
-      p {
-        background-color: #5183fe;
-      }
-    }
-  }
-
-  img {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-
-  .texts {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-
-    img {
-      width: 100%;
-      height: 300px;
-      border-radius: 10px;
-      object-fit: cover;
-    }
-
-    p {
-      padding: 20px;
-      background-color: rgba(17, 25, 40, 0.3);
-      border-radius: 10px;
-    }
-
-    span {
-      font-size: 13px;
-    }
-  }
-}
-
-.bottom {
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid #dddddd35;
-  border-radius: 20px;
-  gap: 20px;
-  margin-top: auto;
-
-  .icons {
-    display: flex;
-    gap: 20px;
-  }
-
-  img {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-  }
-
-  input {
-    flex: 1;
-    background-color: rgba(17, 25, 40, 0.5);
-    border: none;
-    outline: none;
-    color: white;
-    padding: 20px;
-    border-radius: 10px;
-    font-size: 16px;
-
-    &:disabled {
-      cursor: not-allowed;
-    }
-  }
-
-  .emoji {
-    position: relative;
-
-    .picker {
-      position: absolute;
-      bottom: 50px;
-      left: 0;
-    }
-  }
-
-  .sendButton {
-    background-color: #5183fe;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-
-    &:disabled {
-      background-color: #5182feb4;
-      cursor: not-allowed;
-    }
-  }
-}
-
-/* Add media query for small screen devices */
-@media (max-width: 600px) {
-  /* For mobile screens, always show the delete button */
-  .message .delete-btn {
-    
-    position: absolute;
-    top: 5px;
-    right: 10px;
-    transform: scale(1);
-    opacity: 1;
-  }
-
-  /* Mobile-specific adjustments */
-  .message {
-    width: calc(100% - 30px);
-    padding-right: 30px;
-  }
-
-  .message .dropdown button {
-    padding: 5px 10px;
-    font-size: 12px;
-    min-width: 80px;
-  }
-
-  /* Adjust the dropdown box placement */
-  .message .dropdown {
-    width: auto;
-  }
-
-  .message.own .texts p {
-    font-size: 14px;
-  }
-
-  .bottom .icons img {
-    width: 18px;
-    height: 18px;
-  }
-}
-
-#linked {
-  cursor: pointer;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-#linked:hover {
-  transform: scale(1.1);
-  opacity: 0.8;
-}
-
-#delete {
-  cursor: pointer;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-#delete:hover {
-  transform: scale(1);
-  opacity: 1;
 }

@@ -4,79 +4,116 @@ import {
   arrayUnion,
   collection,
   doc,
+  getDoc,
   getDocs,
-  query,
   serverTimestamp,
   setDoc,
   updateDoc,
-  where,
 } from "firebase/firestore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUserStore } from "../../../../lib/userStore";
+import { useChatStore } from "../../../../lib/chatStore";
 import { toast } from "react-toastify";
+import { localDb } from "../../../../lib/localDb";
 
 const AddUser = ({ setAddMode }) => {
-  const [user, setUser] = useState(null);
-  const { currentUser } = useUserStore();
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const { currentUser, isLocalMode } = useUserStore();
+  const { changeChat } = useChatStore();
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const username = formData.get("username");
+  useEffect(() => {
+    fetchAllUsers();
+  }, []);
 
+  const fetchAllUsers = async () => {
     try {
-      const userRef = collection(db, "users");
-      const q = query(userRef, where("username", "==", username));
-      const querySnapShot = await getDocs(q);
-
-      if (!querySnapShot.empty) {
-        setUser(querySnapShot.docs[0].data());
-      } else {
-        toast.error("No user found!");
+      setLoading(true);
+      if (isLocalMode) {
+        const allUsers = localDb.query("SELECT * FROM users").filter((u) => u.id !== currentUser.id);
+        setUsers(allUsers);
+        return;
       }
+      const usersRef = collection(db, "users");
+      const querySnapshot = await getDocs(usersRef);
+      const allUsers = querySnapshot.docs
+        .map((docSnap) => docSnap.data())
+        .filter((u) => u.id !== currentUser.id);
+      setUsers(allUsers);
     } catch (err) {
-      console.error(err);
-      toast.error("An error occurred while searching for the user.");
+      console.error("Error fetching users:", err);
+      toast.error("Failed to load users.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAdd = async () => {
+  const filteredUsers = users.filter((u) =>
+    u.username.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleAdd = async (selectedUser) => {
     try {
+      if (isLocalMode) {
+        const existingChats = localDb.getUserChats(currentUser.id);
+        const existingChat = existingChats.find((c) => c.receiverId === selectedUser.id);
+        if (existingChat) {
+          toast.info("Chat already exists! Opening it.");
+          changeChat(existingChat.chatId, selectedUser);
+          setAddMode(false);
+          return;
+        }
+        const newChatId = localDb.createLocalChat(currentUser, selectedUser);
+        toast.success("Chat created successfully!");
+        changeChat(newChatId, selectedUser);
+        setAddMode(false);
+        return;
+      }
+
+      // Check if chat already exists
+      const userChatsRef = doc(db, "userchats", currentUser.id);
+      const userChatsSnap = await getDoc(userChatsRef);
+
+      if (userChatsSnap.exists()) {
+        const existingChats = userChatsSnap.data().chats || [];
+        const existingChat = existingChats.find(
+          (c) => c.receiverId === selectedUser.id
+        );
+        if (existingChat) {
+          // Chat exists — select it and close modal
+          toast.info("Chat already exists! Opening it.");
+          changeChat(existingChat.chatId, selectedUser);
+          setAddMode(false);
+          return;
+        }
+      }
+
+      // Create new chat
       const chatRef = collection(db, "chats");
-      const userChatsRef = collection(db, "userchats");
       const newChatRef = doc(chatRef);
+      const userChatsCollection = collection(db, "userchats");
 
       await setDoc(newChatRef, {
         createdAt: serverTimestamp(),
         messages: [],
       });
 
-     
-
-      await updateDoc(doc(userChatsRef, user.id), {
+      await updateDoc(doc(userChatsCollection, selectedUser.id), {
         chats: arrayUnion({
-
           chatId: newChatRef.id,
-
           lastMessage: "",
-
           receiverId: currentUser.id,
-
           updatedAt: Date.now(),
-
         }),
       });
-      await updateDoc(doc(userChatsRef, currentUser.id), {
+
+      await updateDoc(doc(userChatsCollection, currentUser.id), {
         chats: arrayUnion({
-
           chatId: newChatRef.id,
-
           lastMessage: "",
-
-          receiverId: user.id,
-
+          receiverId: selectedUser.id,
           updatedAt: Date.now(),
-
         }),
       });
 
@@ -89,26 +126,66 @@ const AddUser = ({ setAddMode }) => {
   };
 
   return (
-    <div className="addUser">
-      <form onSubmit={handleSearch}>
-        <input type="text" placeholder="Username" name="username" />
-        <button type="submit">Search</button>
-        <img
-          src="./minus.png"
-          alt="Close"
-          className="cross"
-          onClick={() => setAddMode(false)}
-        />
-      </form>
-      {user && (
-        <div className="user">
-          <div className="detail">
-            <img src={user.avatar || "./avatar2.png"} alt="Avatar" />
-            <span>{user.username}</span>
-          </div>
-          <button onClick={handleAdd}>Add User</button>
+    <div className="wa-newchat__overlay" onClick={() => setAddMode(false)}>
+      <div
+        className="wa-newchat__modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="wa-newchat__header">
+          <button
+            className="wa-newchat__back-btn"
+            onClick={() => setAddMode(false)}
+          >
+            ✕
+          </button>
+          <h2 className="wa-newchat__title">New Chat</h2>
         </div>
-      )}
+
+        {/* Search */}
+        <div className="wa-newchat__search">
+          <span className="wa-newchat__search-icon">🔍</span>
+          <input
+            type="text"
+            placeholder="Search users"
+            className="wa-newchat__search-input"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+        </div>
+
+        {/* User List */}
+        <div className="wa-newchat__list">
+          {loading ? (
+            <div className="wa-newchat__loading">Loading users...</div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="wa-newchat__empty">No users found</div>
+          ) : (
+            filteredUsers.map((user) => (
+              <div
+                className="wa-newchat__user-item"
+                key={user.id}
+                onClick={() => handleAdd(user)}
+              >
+                <img
+                  src={user.avatar || "./avatar2.png"}
+                  alt={user.username}
+                  className="wa-newchat__user-avatar"
+                />
+                <div className="wa-newchat__user-info">
+                  <span className="wa-newchat__user-name">
+                    {user.username}
+                  </span>
+                  <span className="wa-newchat__user-status">
+                    {user.status || "Hey! I'm using ChatApp."}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 };
