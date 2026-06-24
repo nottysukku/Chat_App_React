@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./login.css";
 import { toast } from "react-toastify";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, deleteUser } from "firebase/auth";
 import { auth, db } from "../../lib/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import upload from "../../lib/upload";
@@ -55,6 +55,16 @@ const Login = () => {
       return toast.warn("Please enter all fields!");
     }
 
+    if (username.trim().length < 2) {
+      setLoading(false);
+      return toast.warn("Username must be at least 2 characters.");
+    }
+
+    if (password.length < 6) {
+      setLoading(false);
+      return toast.warn("Password must be at least 6 characters.");
+    }
+
     if (!avatar.file) {
       setLoading(false);
       return toast.warn("Please upload an avatar photo!");
@@ -86,11 +96,13 @@ const Login = () => {
     }
 
     // Standard Firebase Cloud registration
+    let createdAuthUser = null;
     try {
       // Upload image first to avoid race condition on user auth state change
       const imgUrl = await upload(avatar.file);
 
       const res = await createUserWithEmailAndPassword(auth, email, password);
+      createdAuthUser = res.user;
 
       await setDoc(doc(db, "users", res.user.uid), {
         username,
@@ -107,12 +119,37 @@ const Login = () => {
 
       // Trigger manual store fetch to log the user in immediately
       await useUserStore.getState().fetchUserInfo(res.user.uid);
-      toast.success(`Welcome, ${username}!`);
+      toast.success(`Welcome to ChatApp, ${username}! 🎉`);
     } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      // If Firestore write failed AFTER Auth user was created, delete the dangling Auth account
+      if (createdAuthUser && (err.code === "permission-denied" || err.message?.includes("permissions"))) {
+        try { await deleteUser(createdAuthUser); } catch (_) {}
+        toast.error("⚠️ Firestore permissions error! Please ask the admin to update the Firestore Security Rules to allow authenticated writes. See console for details.");
+      } else {
+        toast.error(friendlyAuthError(err));
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Map Firebase error codes → human-readable messages
+  const friendlyAuthError = (err) => {
+    switch (err.code) {
+      case "auth/weak-password":         return "Password must be at least 6 characters.";
+      case "auth/email-already-in-use":  return "This email is already registered. Try signing in instead.";
+      case "auth/invalid-email":         return "Please enter a valid email address.";
+      case "auth/user-not-found":        return "No account found with this email. Please sign up first.";
+      case "auth/wrong-password":        return "Incorrect password. Please try again.";
+      case "auth/too-many-requests":     return "Too many failed attempts. Please wait a moment and try again.";
+      case "auth/network-request-failed":return "Network error. Please check your internet connection.";
+      case "permission-denied":          return "⚠️ Firestore permissions blocked the request. Update your Firestore Security Rules in Firebase Console.";
+      default:
+        if (err.message?.includes("permissions")) {
+          return "⚠️ Firestore Security Rules are blocking this action. Go to Firebase Console → Firestore → Rules and allow authenticated reads/writes.";
+        }
+        return err.message || "An unexpected error occurred. Please try again.";
     }
   };
 
@@ -150,7 +187,7 @@ const Login = () => {
       toast.success("Signed in successfully!");
     } catch (err) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -269,9 +306,10 @@ const Login = () => {
               <input
                 className="login__input"
                 type={showPassword ? "text" : "password"}
-                placeholder="Password"
+                placeholder="Password (min. 6 characters)"
                 name="password"
                 autoComplete="new-password"
+                minLength={6}
               />
               <button
                 type="button"
