@@ -6,17 +6,25 @@ class LocalDb {
   }
 
   init() {
-    // Migrate existing Unsplash images if stored in LocalStorage to prevent ERR_SSL_PROTOCOL_ERROR
+    // Migrate existing Unsplash images and add default passwords if stored in LocalStorage to prevent login issues
     try {
       const usersStr = localStorage.getItem("sqlite_users");
-      if (usersStr && usersStr.includes("unsplash.com")) {
+      if (usersStr) {
         const users = JSON.parse(usersStr);
+        let updated = false;
         users.forEach(u => {
           if (u.avatar && u.avatar.includes("unsplash.com")) {
             u.avatar = "./avatar2.png";
+            updated = true;
+          }
+          if (!u.password) {
+            u.password = "password";
+            updated = true;
           }
         });
-        localStorage.setItem("sqlite_users", JSON.stringify(users));
+        if (updated) {
+          localStorage.setItem("sqlite_users", JSON.stringify(users));
+        }
       }
       const storiesStr = localStorage.getItem("sqlite_stories");
       if (storiesStr && storiesStr.includes("unsplash.com")) {
@@ -42,6 +50,7 @@ class LocalDb {
           id: "alice_id",
           username: "Alice Smith",
           email: "alice@example.com",
+          password: "password",
           avatar: "./avatar2.png",
           status: "🌸 Coding my life away...",
           blocked: [],
@@ -50,6 +59,7 @@ class LocalDb {
           id: "bob_id",
           username: "Bob Jones",
           email: "bob@example.com",
+          password: "password",
           avatar: "./avatar2.png",
           status: "🏄‍♂️ Catching some waves",
           blocked: [],
@@ -58,6 +68,7 @@ class LocalDb {
           id: "gemini_ai_id",
           username: "Gemini AI",
           email: "gemini@google.com",
+          password: "password",
           avatar: "./avatar2.png",
           status: "🤖 Always online, ready to help!",
           blocked: [],

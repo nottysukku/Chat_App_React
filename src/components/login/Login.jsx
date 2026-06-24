@@ -1,17 +1,10 @@
 import { useState } from "react";
 import "./login.css";
 import { toast } from "react-toastify";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import { auth, db } from "../../lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
-import upload from "../../lib/upload";
 import { useUserStore } from "../../lib/userStore";
 
 const Login = () => {
-  const { loginGuest } = useUserStore();
+  const { loginGuest, signupLocal, loginLocal } = useUserStore();
   const [avatar, setAvatar] = useState({
     file: null,
     url: "",
@@ -34,40 +27,37 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     const formData = new FormData(e.target);
-
     const { username, email, password } = Object.fromEntries(formData);
 
     if (!username || !email || !password) {
       setLoading(false);
-      return toast.warn("Please enter inputs!");
+      return toast.warn("Please enter all fields!");
     }
 
     if (!avatar.file) {
       setLoading(false);
-      return toast.warn("Please upload an avatar!");
+      return toast.warn("Please upload an avatar photo!");
     }
 
     try {
-      const res = await createUserWithEmailAndPassword(auth, email, password);
-      const imgUrl = await upload(avatar.file);
-
-      await setDoc(doc(db, "users", res.user.uid), {
-        username,
-        email,
-        avatar: imgUrl,
-        id: res.user.uid,
-        blocked: [],
-      });
-
-      await setDoc(doc(db, "userchats", res.user.uid), {
-        chats: [],
-      });
-
-      toast.success("Account created! You can login now!");
+      const reader = new FileReader();
+      reader.readAsDataURL(avatar.file);
+      reader.onloadend = async () => {
+        const avatarBase64 = reader.result;
+        const success = await signupLocal(username, email, password, avatarBase64);
+        setLoading(false);
+        if (success) {
+          setIsRegisterMode(false); // Switch to login screen
+          setAvatar({ file: null, url: "" });
+        }
+      };
+      reader.onerror = () => {
+        toast.error("Failed to process profile avatar picture.");
+        setLoading(false);
+      };
     } catch (err) {
-      console.log(err);
-      toast.error(err.message);
-    } finally {
+      console.error(err);
+      toast.error("An error occurred during registration.");
       setLoading(false);
     }
   };
@@ -79,11 +69,16 @@ const Login = () => {
     const formData = new FormData(e.target);
     const { email, password } = Object.fromEntries(formData);
 
+    if (!email || !password) {
+      setLoading(false);
+      return toast.warn("Please enter email and password!");
+    }
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await loginLocal(email, password);
     } catch (err) {
-      console.log(err);
-      toast.error(err.message);
+      console.error(err);
+      toast.error("Sign in failed.");
     } finally {
       setLoading(false);
     }

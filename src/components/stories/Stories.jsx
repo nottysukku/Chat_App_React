@@ -89,8 +89,15 @@ const Stories = ({ isOpen, onClose }) => {
 
       if (newStatusFile) {
         if (isLocalMode) {
-          // In guest mode, create a local session URL
-          content = URL.createObjectURL(newStatusFile);
+          const getBase64 = (file) => {
+            return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = (err) => reject(err);
+            });
+          };
+          content = await getBase64(newStatusFile);
         } else {
           // Upload to firebase storage
           content = await upload(newStatusFile);

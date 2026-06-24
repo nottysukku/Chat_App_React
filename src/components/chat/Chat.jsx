@@ -178,6 +178,47 @@ const Chat = () => {
         return;
       }
 
+      if (isLocalMode) {
+        try {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onloadend = () => {
+            const fileBase64 = reader.result;
+            const chats = localDb._getTable("chats");
+            const chatIndex = chats.findIndex((c) => c.id === chatId);
+            if (chatIndex > -1) {
+              const newMsg = {
+                senderId: currentUser.id,
+                text: "",
+                createdAt: new Date().toISOString(),
+                img: fileBase64,
+                type: file.type,
+              };
+              chats[chatIndex].messages.push(newMsg);
+              localDb._setTable("chats", chats);
+
+              const userIDs = [currentUser.id, user.id];
+              userIDs.forEach((id) => {
+                const userChats = localDb.getUserChats(id);
+                const idx = userChats.findIndex((c) => c.chatId === chatId);
+                if (idx > -1) {
+                  userChats[idx].lastMessage = "[File]";
+                  userChats[idx].isSeen = id === currentUser.id;
+                  userChats[idx].updatedAt = Date.now();
+                  localDb.updateUserChats(id, userChats);
+                }
+              });
+            }
+            toast.success("File attached successfully!");
+            endRef.current?.scrollIntoView({ behavior: "smooth" });
+          };
+        } catch (error) {
+          console.error("Local attachment error:", error);
+          toast.error("Failed to attach file.");
+        }
+        return;
+      }
+
       try {
         setUploadProgress(0); // Reset progress
         const fileUrl = await upload(file, (progress) => {
@@ -212,41 +253,52 @@ const Chat = () => {
     if (!text.trim() && !img.file) return;
 
     if (isLocalMode) {
-      const localImgUrl = img.url || null;
-      const chats = localDb._getTable("chats");
-      const chatIndex = chats.findIndex((c) => c.id === chatId);
-      if (chatIndex > -1) {
-        const newMsg = {
-          senderId: currentUser.id,
-          text,
-          createdAt: new Date().toISOString(),
-          ...(localImgUrl && { img: localImgUrl }),
-        };
-        chats[chatIndex].messages.push(newMsg);
-        localDb._setTable("chats", chats);
+      const processSend = (imgBase64) => {
+        const chats = localDb._getTable("chats");
+        const chatIndex = chats.findIndex((c) => c.id === chatId);
+        if (chatIndex > -1) {
+          const newMsg = {
+            senderId: currentUser.id,
+            text,
+            createdAt: new Date().toISOString(),
+            ...(imgBase64 && { img: imgBase64 }),
+          };
+          chats[chatIndex].messages.push(newMsg);
+          localDb._setTable("chats", chats);
 
-        const userIDs = [currentUser.id, user.id];
-        userIDs.forEach((id) => {
-          const userChats = localDb.getUserChats(id);
-          const idx = userChats.findIndex((c) => c.chatId === chatId);
-          if (idx > -1) {
-            userChats[idx].lastMessage = text || (localImgUrl ? "[Image]" : "");
-            userChats[idx].isSeen = id === currentUser.id;
-            userChats[idx].updatedAt = Date.now();
-            localDb.updateUserChats(id, userChats);
+          const userIDs = [currentUser.id, user.id];
+          userIDs.forEach((id) => {
+            const userChats = localDb.getUserChats(id);
+            const idx = userChats.findIndex((c) => c.chatId === chatId);
+            if (idx > -1) {
+              userChats[idx].lastMessage = text || (imgBase64 ? "[Image]" : "");
+              userChats[idx].isSeen = id === currentUser.id;
+              userChats[idx].updatedAt = Date.now();
+              localDb.updateUserChats(id, userChats);
+            }
+          });
+
+          if (user.id === "gemini_ai_id") {
+            setTimeout(() => {
+              triggerLocalGeminiResponse(chatId, [...chats[chatIndex].messages]);
+            }, 1000);
           }
-        });
-
-        if (user.id === "gemini_ai_id") {
-          setTimeout(() => {
-            triggerLocalGeminiResponse(chatId, [...chats[chatIndex].messages]);
-          }, 1000);
         }
+        setText("");
+        setImg({ file: null, url: "" });
+        setUploadProgress(0);
+        endRef.current?.scrollIntoView({ behavior: "smooth" });
+      };
+
+      if (img.file) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          processSend(reader.result);
+        };
+        reader.readAsDataURL(img.file);
+      } else {
+        processSend(null);
       }
-      setText("");
-      setImg({ file: null, url: "" });
-      setUploadProgress(0);
-      endRef.current?.scrollIntoView({ behavior: "smooth" });
       return;
     }
 
@@ -350,33 +402,47 @@ const Chat = () => {
     }
   
     if (isLocalMode) {
-      const chats = localDb._getTable("chats");
-      const chatIndex = chats.findIndex((c) => c.id === chatId);
-      if (chatIndex > -1) {
-        chats[chatIndex].messages.push({
-          senderId: currentUser.id,
-          text: "",
-          createdAt: new Date().toISOString(),
-          audio: audioUrl,
-          type: "audio",
-        });
-        localDb._setTable("chats", chats);
+      try {
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+          const audioBase64 = reader.result;
+          const chats = localDb._getTable("chats");
+          const chatIndex = chats.findIndex((c) => c.id === chatId);
+          if (chatIndex > -1) {
+            chats[chatIndex].messages.push({
+              senderId: currentUser.id,
+              text: "",
+              createdAt: new Date().toISOString(),
+              audio: audioBase64,
+              type: "audio",
+            });
+            localDb._setTable("chats", chats);
 
-        const userIDs = [currentUser.id, user.id];
-        userIDs.forEach((id) => {
-          const userChats = localDb.getUserChats(id);
-          const idx = userChats.findIndex((c) => c.chatId === chatId);
-          if (idx > -1) {
-            userChats[idx].lastMessage = "[Voice Message]";
-            userChats[idx].isSeen = id === currentUser.id;
-            userChats[idx].updatedAt = Date.now();
-            localDb.updateUserChats(id, userChats);
+            const userIDs = [currentUser.id, user.id];
+            userIDs.forEach((id) => {
+              const userChats = localDb.getUserChats(id);
+              const idx = userChats.findIndex((c) => c.chatId === chatId);
+              if (idx > -1) {
+                userChats[idx].lastMessage = "[Voice Message]";
+                userChats[idx].isSeen = id === currentUser.id;
+                userChats[idx].updatedAt = Date.now();
+                localDb.updateUserChats(id, userChats);
+              }
+            });
           }
-        });
+          setAudioBlob(null);
+          setAudioUrl(null);
+          setUploadProgress(0);
+          endRef.current?.scrollIntoView({ behavior: "smooth" });
+        };
+      } catch (err) {
+        console.error("Local audio encoding error:", err);
+        toast.error("Failed to process audio message.");
+        setAudioBlob(null);
+        setAudioUrl(null);
+        setUploadProgress(0);
       }
-      setAudioBlob(null);
-      setAudioUrl(null);
-      setUploadProgress(0);
       return;
     }
 
@@ -472,7 +538,8 @@ const Chat = () => {
         parts: [{ text: msg.text || "" }]
       }));
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`, {
+      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: formattedHistory })
