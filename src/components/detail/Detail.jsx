@@ -8,6 +8,7 @@ import "./detail.css";
 import { toast } from "react-toastify";
 import { localDb } from "../../lib/localDb";
 import { encrypt, decrypt, getChatKey } from "../../lib/encryption";
+import SqlConsole from "../SqlConsole/SqlConsole";
 
 const Detail = () => {
   const { chat, receiverId, chatId, user, isGroup, groupInfo, isCurrentUserBlocked, isReceiverBlocked, changeBlock, resetChat } = useChatStore();
@@ -30,6 +31,8 @@ const Detail = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);  // For logout
   const [showBlockModal, setShowBlockModal] = useState(false);  // For block user
   const [showExitGroupModal, setShowExitGroupModal] = useState(false); // For exit group
+  const [showSqlConsole, setShowSqlConsole] = useState(false);
+  const [showDeveloperDropdown, setShowDeveloperDropdown] = useState(false);
 
   useEffect(() => {
     const fetchPhotos = async () => {
@@ -500,6 +503,60 @@ const Detail = () => {
         <div className="option">
           <div
             className="title"
+            onClick={() => setShowDeveloperDropdown((prev) => !prev)}
+          >
+            <span>Developer Tools</span>
+            <img
+              src={showDeveloperDropdown ? "./arrowDown.png" : "./arrowUp.png"}
+              alt="Arrow"
+            />
+          </div>
+          {showDeveloperDropdown && (
+            <div className="dropdown" style={{ display: "flex", flexDirection: "column", gap: "8px", padding: "10px" }}>
+              <button
+                onClick={() => setShowSqlConsole(true)}
+                className="sql-console-btn"
+                style={{
+                  background: "rgba(99, 102, 241, 0.15)",
+                  border: "1px solid rgba(99, 102, 241, 0.3)",
+                  color: "var(--text-primary)",
+                  padding: "8px 12px",
+                  borderRadius: "var(--radius-sm)",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  fontWeight: "500",
+                  textAlign: "left",
+                  transition: "background var(--transition-fast)"
+                }}
+              >
+                🗄️ Interactive SQLite Console
+              </button>
+              <a
+                href="https://github.com/nottysukku"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid var(--border-color)",
+                  color: "var(--text-primary)",
+                  padding: "8px 12px",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "13px",
+                  fontWeight: "500",
+                  textDecoration: "none",
+                  textAlign: "center",
+                  transition: "background var(--transition-fast)"
+                }}
+              >
+                🐙 Developer GitHub Profile
+              </a>
+            </div>
+          )}
+        </div>
+
+        <div className="option">
+          <div
+            className="title"
             onClick={() => setShowPhotos(!showPhotos)}
           >
             <span>Shared Files</span>
@@ -594,6 +651,7 @@ const Detail = () => {
           </div>
         </div>
       )}
+      <SqlConsole isOpen={showSqlConsole} onClose={() => setShowSqlConsole(false)} />
     </div>
   );
 };

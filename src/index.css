@@ -1,5 +1,30 @@
 /* ===== WhatsApp-Inspired Design System ===== */
 
+/* Futuristic Cursor Customization */
+* {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3.5' fill='%2300a884' fill-opacity='0.6' stroke='%23ffffff' stroke-width='1.2'/%3E%3C/svg%3E") 8 8, auto;
+}
+
+a, button, label, select, input[type="submit"], input[type="button"], .wa-chatlist__item, .title, .wa-header__avatar, .wa-theme-toggle {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 18 18'%3E%3Ccircle cx='9' cy='9' r='6' fill='%2300a884' fill-opacity='0.3' stroke='%23ffffff' stroke-width='1.8'/%3E%3Ccircle cx='9' cy='9' r='1.5' fill='%23ffffff'/%3E%3C/svg%3E") 9 9, pointer !important;
+}
+
+/* Custom Scrollbar Styles */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(var(--wa-teal-rgb, 18, 140, 126), 0.25);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--wa-teal-rgb, 18, 140, 126), 0.55);
+}
+
 /* CSS Custom Properties */
 :root {
   /* WhatsApp Colors */
@@ -9,19 +34,22 @@
   --wa-light-green: #DCF8C6;
   --wa-blue: #34B7F1;
   
+  --wa-teal-rgb: 18, 140, 126;
+  --wa-dark-green-rgb: 7, 94, 84;
+  
   /* Background Colors */
-  --bg-primary: #111b21;
-  --bg-secondary: #202c33;
-  --bg-tertiary: #2a3942;
+  --bg-primary: rgba(17, 27, 33, 0.65);
+  --bg-secondary: rgba(32, 44, 51, 0.45);
+  --bg-tertiary: rgba(42, 57, 66, 0.6);
   --bg-chat: #0b141a;
   --bg-chat-pattern: #0b141a;
-  --bg-hover: rgba(255, 255, 255, 0.06);
-  --bg-active: rgba(255, 255, 255, 0.1);
-  --bg-input: #2a3942;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.09);
+  --bg-input: rgba(42, 57, 66, 0.5);
   
   /* Bubble Colors */
-  --bubble-outgoing: #005c4b;
-  --bubble-incoming: #202c33;
+  --bubble-outgoing: rgba(0, 92, 75, 0.85);
+  --bubble-incoming: rgba(32, 44, 51, 0.85);
   
   /* Text Colors */
   --text-primary: #e9edef;
@@ -30,13 +58,13 @@
   --text-green: #00a884;
   
   /* Border Colors */
-  --border-color: rgba(134, 150, 160, 0.15);
-  --border-light: rgba(134, 150, 160, 0.08);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.04);
   
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   
   /* Spacing */
   --sidebar-width: 400px;
@@ -56,29 +84,29 @@
 
 /* Light Mode */
 html.light {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f0f2f5;
-  --bg-tertiary: #e9edef;
+  --bg-primary: rgba(255, 255, 255, 0.65);
+  --bg-secondary: rgba(240, 242, 245, 0.45);
+  --bg-tertiary: rgba(233, 237, 239, 0.6);
   --bg-chat: #efeae2;
   --bg-chat-pattern: #efeae2;
   --bg-hover: rgba(0, 0, 0, 0.04);
   --bg-active: rgba(0, 0, 0, 0.08);
-  --bg-input: #ffffff;
+  --bg-input: rgba(255, 255, 255, 0.6);
   
-  --bubble-outgoing: #d9fdd3;
-  --bubble-incoming: #ffffff;
+  --bubble-outgoing: rgba(217, 253, 211, 0.85);
+  --bubble-incoming: rgba(255, 255, 255, 0.85);
   
   --text-primary: #111b21;
   --text-secondary: #54656f;
   --text-tertiary: #667781;
   --text-green: #008069;
   
-  --border-color: rgba(0, 0, 0, 0.08);
-  --border-light: rgba(0, 0, 0, 0.04);
+  --border-color: rgba(0, 0, 0, 0.06);
+  --border-light: rgba(0, 0, 0, 0.03);
   
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.12);
-  --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.15);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
 }
 
 /* ===== Theme Styles & Custom Variables ===== */
@@ -88,13 +116,17 @@ html.theme-blue {
   --wa-teal: #0c4a6e;
   --wa-dark-green: #082f49;
   --text-green: #38bdf8;
-  --bubble-outgoing: #0369a1;
+  --bubble-outgoing: rgba(3, 105, 161, 0.85);
+  --wa-teal-rgb: 12, 74, 110;
+  --wa-dark-green-rgb: 8, 47, 73;
 }
 html.light.theme-blue {
   --wa-teal: #0284c7;
   --wa-dark-green: #0369a1;
   --text-green: #0ea5e9;
-  --bubble-outgoing: #e0f2fe;
+  --bubble-outgoing: rgba(224, 242, 254, 0.85);
+  --wa-teal-rgb: 2, 132, 199;
+  --wa-dark-green-rgb: 3, 105, 161;
 }
 
 /* Purple Theme (Royal Amethyst) */
@@ -102,13 +134,17 @@ html.theme-purple {
   --wa-teal: #4c1d95;
   --wa-dark-green: #2e1065;
   --text-green: #c084fc;
-  --bubble-outgoing: #581c87;
+  --bubble-outgoing: rgba(88, 28, 135, 0.85);
+  --wa-teal-rgb: 76, 29, 149;
+  --wa-dark-green-rgb: 46, 16, 101;
 }
 html.light.theme-purple {
   --wa-teal: #7c3aed;
   --wa-dark-green: #5b21b6;
   --text-green: #8b5cf6;
-  --bubble-outgoing: #edd8ff;
+  --bubble-outgoing: rgba(237, 216, 255, 0.85);
+  --wa-teal-rgb: 124, 58, 237;
+  --wa-dark-green-rgb: 91, 33, 182;
 }
 
 /* Amber Theme (Desert Sunset) */
@@ -116,13 +152,17 @@ html.theme-amber {
   --wa-teal: #78350f;
   --wa-dark-green: #451a03;
   --text-green: #fbbf24;
-  --bubble-outgoing: #b45309;
+  --bubble-outgoing: rgba(180, 83, 9, 0.85);
+  --wa-teal-rgb: 120, 53, 15;
+  --wa-dark-green-rgb: 69, 26, 3;
 }
 html.light.theme-amber {
   --wa-teal: #d97706;
   --wa-dark-green: #b45309;
   --text-green: #f59e0b;
-  --bubble-outgoing: #fef3c7;
+  --bubble-outgoing: rgba(254, 243, 199, 0.85);
+  --wa-teal-rgb: 217, 119, 6;
+  --wa-dark-green-rgb: 180, 83, 9;
 }
 
 /* Dark Green Theme (Forest Grove) */
@@ -130,13 +170,17 @@ html.theme-darkgreen {
   --wa-teal: #14532d;
   --wa-dark-green: #064e3b;
   --text-green: #4ade80;
-  --bubble-outgoing: #166534;
+  --bubble-outgoing: rgba(22, 101, 52, 0.85);
+  --wa-teal-rgb: 20, 83, 45;
+  --wa-dark-green-rgb: 6, 78, 59;
 }
 html.light.theme-darkgreen {
   --wa-teal: #16a34a;
   --wa-dark-green: #15803d;
   --text-green: #22c55e;
-  --bubble-outgoing: #dcfce7;
+  --bubble-outgoing: rgba(220, 252, 231, 0.85);
+  --wa-teal-rgb: 22, 163, 74;
+  --wa-dark-green-rgb: 21, 128, 61;
 }
 
 /* ===== Micro-Animations & Motion ===== */
@@ -210,20 +254,37 @@ body {
   display: flex;
   width: 100%;
   height: 100vh;
-  background-color: var(--bg-chat);
+  background: radial-gradient(circle at 10% 10%, rgba(var(--wa-teal-rgb), 0.18) 0%, transparent 45%),
+              radial-gradient(circle at 90% 90%, rgba(var(--wa-teal-rgb), 0.18) 0%, transparent 45%),
+              #070b0e;
   position: relative;
+  overflow: hidden;
+  transition: background-color var(--transition-slow);
 }
 
-/* WhatsApp-style green header band */
+html.light .app {
+  background: radial-gradient(circle at 10% 10%, rgba(var(--wa-teal-rgb), 0.08) 0%, transparent 45%),
+              radial-gradient(circle at 90% 90%, rgba(var(--wa-teal-rgb), 0.08) 0%, transparent 45%),
+              #f1f5f9;
+}
+
+/* WhatsApp-style green header band (revamped to futuristic blur element) */
 .app::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 127px;
-  background-color: var(--wa-dark-green);
+  top: -15%;
+  left: -10%;
+  width: 120%;
+  height: 250px;
+  background: linear-gradient(135deg, rgba(var(--wa-teal-rgb, 18, 140, 126), 0.3) 0%, rgba(var(--wa-dark-green-rgb, 7, 94, 84), 0.15) 100%);
+  filter: blur(50px);
   z-index: 0;
+  animation: pulseGradient 10s ease infinite alternate;
+}
+
+@keyframes pulseGradient {
+  0% { opacity: 0.6; transform: translateY(0) scale(1); }
+  100% { opacity: 0.9; transform: translateY(15px) scale(1.06); }
 }
 
 /* Main Container */
@@ -236,8 +297,21 @@ body {
   margin: 19px auto;
   display: flex;
   overflow: hidden;
-  background-color: var(--bg-primary);
-  box-shadow: var(--shadow-lg);
+  background: rgba(30, 41, 59, 0.4) !important;
+  backdrop-filter: blur(20px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(190%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: var(--radius-xl) !important;
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5), 
+              0 0 25px rgba(var(--wa-teal-rgb), 0.15) !important;
+  transition: background-color var(--transition-slow), border-color var(--transition-slow), box-shadow var(--transition-slow);
+}
+
+html.light .main-container {
+  background: rgba(255, 255, 255, 0.45) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.12), 
+              0 0 25px rgba(var(--wa-teal-rgb), 0.08) !important;
 }
 
 /* Chat Layout */
@@ -255,7 +329,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--wa-dark-green) 0%, var(--wa-teal) 50%, var(--wa-dark-green) 100%);
+  background: radial-gradient(circle at 30% 20%, rgba(var(--wa-teal-rgb), 0.25) 0%, transparent 50%),
+              radial-gradient(circle at 80% 85%, rgba(var(--wa-teal-rgb), 0.25) 0%, transparent 50%),
+              #070b0e;
 }
 
 /* Loading Screen */

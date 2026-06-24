@@ -19,6 +19,14 @@ const App = () => {
     const savedTheme = localStorage.getItem("chat_app_theme") || "theme-green";
     document.documentElement.className = savedTheme;
 
+    // Apply saved light/dark mode on mount
+    const isDarkMode = localStorage.getItem("chat_app_dark_mode") !== "false"; // default to dark mode
+    if (isDarkMode) {
+      document.documentElement.classList.remove("light");
+    } else {
+      document.documentElement.classList.add("light");
+    }
+
     const unSub = onAuthStateChanged(auth, (user) => {
       fetchUserInfo(user?.uid);
     });

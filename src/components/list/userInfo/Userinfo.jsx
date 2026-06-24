@@ -5,22 +5,32 @@ import { useChatStore } from "../../../lib/chatStore";
 import Chatbot from "../../Chatbot/Chatbot";
 import Stories from "../../stories/Stories";
 import ProfileDrawer from "./ProfileDrawer";
+import SqlConsole from "../../SqlConsole/SqlConsole";
 import "./userInfo.css";
 
 const UserInfo = () => {
   const { currentUser, isLocalMode, logoutGuest } = useUserStore();
   const { resetChat } = useChatStore();
-  const [isDark, setIsDark] = useState(!document.documentElement.classList.contains("light"));
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem("chat_app_dark_mode");
+    if (saved !== null) {
+      return saved === "true";
+    }
+    return !document.documentElement.classList.contains("light");
+  });
   const [showChatbot, setShowChatbot] = useState(false);
   const [showStories, setShowStories] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showSqlConsole, setShowSqlConsole] = useState(false);
 
   const toggleDarkMode = () => {
     const html = document.documentElement;
     if (isDark) {
       html.classList.add("light");
+      localStorage.setItem("chat_app_dark_mode", "false");
     } else {
       html.classList.remove("light");
+      localStorage.setItem("chat_app_dark_mode", "true");
     }
     setIsDark(!isDark);
   };
@@ -49,7 +59,9 @@ const UserInfo = () => {
             style={{ cursor: "pointer" }}
             title="View Profile"
           />
-          <span className="wa-header__title">ChatApp</span>
+          <span className="wa-header__title" title={currentUser?.username || "ChatApp"}>
+            {currentUser?.username || "ChatApp"}
+          </span>
         </div>
         <div className="wa-header__actions">
           <button
@@ -59,6 +71,23 @@ const UserInfo = () => {
           >
             {isDark ? "☀️" : "🌙"}
           </button>
+          <button
+            className="wa-header__icon-btn"
+            onClick={() => setShowSqlConsole(true)}
+            title="Interactive SQL Console"
+          >
+            🗄️
+          </button>
+          <a
+            href="https://github.com/nottysukku"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="wa-header__icon-btn"
+            title="Developer's GitHub"
+            style={{ textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            🐙
+          </a>
           <button
             className="wa-header__icon-btn"
             onClick={() => setShowChatbot((prev) => !prev)}
@@ -85,6 +114,7 @@ const UserInfo = () => {
       <Chatbot isOpen={showChatbot} onClose={() => setShowChatbot(false)} />
       <Stories isOpen={showStories} onClose={() => setShowStories(false)} />
       <ProfileDrawer isOpen={showProfile} onClose={() => setShowProfile(false)} />
+      <SqlConsole isOpen={showSqlConsole} onClose={() => setShowSqlConsole(false)} />
     </>
   );
 };

@@ -1,8 +1,9 @@
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { create } from "zustand";
 import { db, auth } from "./firebase";
 import { localDb } from "./localDb";
 import { toast } from "react-toastify";
+import { signInAnonymously } from "firebase/auth";
 
 export const useUserStore = create((set, get) => ({
   currentUser: null,
@@ -52,29 +53,70 @@ export const useUserStore = create((set, get) => ({
     }
   },
 
-  loginGuest: (username) => {
-    const guestUser = {
-      id: "guest_user",
-      username: username || "Guest User",
-      email: "guest@chatapp.local",
-      avatar: "./avatar.png",
-      status: "Hey! I am using ChatApp as a guest.",
-      blocked: [],
-    };
-    
-    // Add guest user to local database if not exists
-    localDb.query("INSERT INTO users (id, username, email, avatar, status) VALUES (?, ?, ?, ?, ?)", [
-      guestUser.id,
-      guestUser.username,
-      guestUser.email,
-      guestUser.avatar,
-      guestUser.status,
-    ]);
+  loginGuest: async (isOffline) => {
+    set({ isLoading: true });
+    if (isOffline) {
+      const guestUser = {
+        id: "guest_user",
+        username: "Guest User",
+        email: "guest@chatapp.local",
+        avatar: "./avatar.png",
+        status: "Hey! I am using ChatApp as a guest.",
+        blocked: [],
+      };
+      
+      // Add guest user to local database if not exists
+      localDb.query("INSERT INTO users (id, username, email, avatar, status) VALUES (?, ?, ?, ?, ?)", [
+        guestUser.id,
+        guestUser.username,
+        guestUser.email,
+        guestUser.avatar,
+        guestUser.status,
+      ]);
 
-    localStorage.setItem("is_local_mode", "true");
-    localStorage.setItem("local_current_user", JSON.stringify(guestUser));
-    set({ currentUser: guestUser, isLocalMode: true, isLoading: false });
-    toast.success("Welcome! Logged in as Guest.");
+      localStorage.setItem("is_local_mode", "true");
+      localStorage.setItem("local_current_user", JSON.stringify(guestUser));
+      set({ currentUser: guestUser, isLocalMode: true, isLoading: false });
+      toast.success("Welcome! Logged in as Guest locally.");
+    } else {
+      // Cloud guest using Firebase Anonymous Authentication
+      try {
+        const res = await signInAnonymously(auth);
+        const uid = res.user.uid;
+
+        const docRef = doc(db, "users", uid);
+        const docSnap = await getDoc(docRef);
+
+        let userData;
+        if (!docSnap.exists()) {
+          const guestName = `Guest_${uid.substring(0, 5)}`;
+          userData = {
+            id: uid,
+            username: guestName,
+            email: `guest_${uid.substring(0, 5)}@chatapp.com`,
+            avatar: "./avatar.png",
+            status: "Hey! I am using ChatApp as a guest.",
+            blocked: [],
+          };
+          
+          await setDoc(docRef, userData);
+          await setDoc(doc(db, "userchats", uid), {
+            chats: [],
+          });
+        } else {
+          userData = docSnap.data();
+        }
+
+        localStorage.setItem("is_local_mode", "false");
+        localStorage.removeItem("local_current_user");
+        set({ currentUser: userData, isLocalMode: false, isLoading: false });
+        toast.success(`Welcome! Logged in as Guest (${userData.username}).`);
+      } catch (err) {
+        console.error("Firebase cloud guest login error:", err);
+        toast.error("Failed to login as guest in Cloud Mode. Please verify that Anonymous Authentication is enabled in the Firebase Console.");
+        set({ isLoading: false });
+      }
+    }
   },
 
   signupLocal: async (username, email, password, avatarBase64) => {

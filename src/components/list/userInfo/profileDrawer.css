@@ -239,3 +239,53 @@
   margin-top: 14px;
   line-height: 1.4;
 }
+
+/* Theme & GitHub Sections inside Profile */
+.wa-profile-drawer__theme-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.wa-profile-drawer__theme-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  cursor: pointer;
+  outline: none;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.wa-profile-drawer__theme-dot:hover {
+  transform: scale(1.2);
+}
+
+.wa-profile-drawer__theme-dot--active {
+  border-color: var(--text-primary);
+  transform: scale(1.15);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.wa-profile-drawer__github-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 500;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  margin-top: 8px;
+}
+
+.wa-profile-drawer__github-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--text-green);
+}
+

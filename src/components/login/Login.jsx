@@ -334,7 +334,7 @@ const Login = () => {
             <button
               className="login__guest-btn"
               type="button"
-              onClick={() => loginGuest()}
+              onClick={() => loginGuest(isOfflineMode)}
               disabled={loading}
             >
               Sign In as Guest
@@ -381,7 +381,7 @@ const Login = () => {
             <button
               className="login__guest-btn"
               type="button"
-              onClick={() => loginGuest()}
+              onClick={() => loginGuest(isOfflineMode)}
               disabled={loading}
             >
               Sign In as Guest

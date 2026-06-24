@@ -11,6 +11,26 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
   const [nameInput, setNameInput] = useState(currentUser?.username || "");
   const [statusInput, setStatusInput] = useState(currentUser?.status || "");
   const [loading, setLoading] = useState(false);
+  const [activeTheme, setActiveTheme] = useState(() => localStorage.getItem("chat_app_theme") || "theme-green");
+
+  const themes = [
+    { id: "theme-green", color: "#00a884", label: "Classic Teal" },
+    { id: "theme-blue", color: "#34b7f1", label: "Cobalt Ocean" },
+    { id: "theme-purple", color: "#a29bfe", label: "Royal Amethyst" },
+    { id: "theme-amber", color: "#f39c12", label: "Desert Sunset" },
+    { id: "theme-darkgreen", color: "#1b4332", label: "Forest Grove" }
+  ];
+
+  const handleThemeSelect = (themeId) => {
+    setActiveTheme(themeId);
+    localStorage.setItem("chat_app_theme", themeId);
+    const isLight = document.documentElement.classList.contains("light");
+    document.documentElement.className = themeId;
+    if (isLight) {
+      document.documentElement.classList.add("light");
+    }
+    toast.info(`Theme changed to ${themeId.replace("theme-", "").replace("-", " ")}!`);
+  };
 
   if (!currentUser) return null;
 
@@ -206,6 +226,36 @@ const ProfileDrawer = ({ isOpen, onClose }) => {
               </button>
             </div>
           )}
+        </div>
+
+        {/* Theme Customization Section */}
+        <div className="wa-profile-drawer__section">
+          <label className="wa-profile-drawer__label">Color Theme</label>
+          <div className="wa-profile-drawer__theme-picker">
+            {themes.map((t) => (
+              <button
+                key={t.id}
+                className={`wa-profile-drawer__theme-dot ${activeTheme === t.id ? "wa-profile-drawer__theme-dot--active" : ""}`}
+                style={{ backgroundColor: t.color }}
+                onClick={() => handleThemeSelect(t.id)}
+                title={t.label}
+                type="button"
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Developer Info Section */}
+        <div className="wa-profile-drawer__section">
+          <label className="wa-profile-drawer__label">Developer Links</label>
+          <a
+            href="https://github.com/nottysukku"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="wa-profile-drawer__github-link"
+          >
+            🐙 Visit my GitHub (@nottysukku)
+          </a>
         </div>
       </div>
     </div>

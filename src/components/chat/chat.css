@@ -96,20 +96,22 @@
 
 .wa-chat__icon-btn:hover {
   background-color: var(--bg-hover);
+  transform: scale(1.08);
 }
 
 .wa-chat__icon-btn img {
   width: 20px;
   height: 20px;
-  filter: var(--icon-filter); /* Adapt to theme */
+  filter: brightness(0) invert(0.9) !important; /* Forces high-contrast light icons in dark mode */
+  transition: transform var(--transition-fast) !important;
 }
 
-/* Adapt icons color for dark/light mode */
-:root {
-  --icon-filter: invert(80%) sepia(10%) saturate(200%) hue-rotate(180deg);
+html.light .wa-chat__icon-btn img {
+  filter: brightness(0) invert(0.3) !important; /* Forces high-contrast dark icons in light mode */
 }
-html.light {
-  --icon-filter: invert(30%) sepia(5%) saturate(100%) hue-rotate(180deg);
+
+.wa-chat__icon-btn:hover img {
+  transform: scale(1.12);
 }
 
 /* ===== Messages Feed ===== */
