@@ -98,6 +98,7 @@ const Login = () => {
     // Standard Firebase Cloud registration
     let createdAuthUser = null;
     try {
+      useUserStore.setState({ isCreatingProfile: true });
       // Upload image first to avoid race condition on user auth state change
       const imgUrl = await upload(avatar.file);
 
@@ -130,6 +131,7 @@ const Login = () => {
         toast.error(friendlyAuthError(err));
       }
     } finally {
+      useUserStore.setState({ isCreatingProfile: false });
       setLoading(false);
     }
   };

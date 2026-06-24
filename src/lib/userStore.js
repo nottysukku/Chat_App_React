@@ -9,6 +9,7 @@ export const useUserStore = create((set, get) => ({
   currentUser: null,
   isLoading: true,
   isLocalMode: localStorage.getItem("is_local_mode") === "true",
+  isCreatingProfile: false,
 
   fetchUserInfo: async (uid) => {
     if (!uid) {
@@ -32,6 +33,11 @@ export const useUserStore = create((set, get) => ({
         localStorage.removeItem("local_current_user");
         set({ currentUser: userData, isLocalMode: false, isLoading: false });
       } else {
+        // If we are currently creating the profile, skip auto sign-out
+        if (get().isCreatingProfile) {
+          console.log("[UserStore] Profile creation in progress, skipping auto sign-out.");
+          return;
+        }
         // Firebase Auth user exists but no Firestore doc — this can happen
         // if the account was created in another session or the doc write failed.
         // Sign them out cleanly so they can re-register properly.
@@ -81,6 +87,7 @@ export const useUserStore = create((set, get) => ({
     } else {
       // Cloud guest using Firebase Anonymous Authentication
       try {
+        set({ isCreatingProfile: true });
         const res = await signInAnonymously(auth);
         const uid = res.user.uid;
 
@@ -109,12 +116,12 @@ export const useUserStore = create((set, get) => ({
 
         localStorage.setItem("is_local_mode", "false");
         localStorage.removeItem("local_current_user");
-        set({ currentUser: userData, isLocalMode: false, isLoading: false });
+        set({ currentUser: userData, isLocalMode: false, isLoading: false, isCreatingProfile: false });
         toast.success(`Welcome! Logged in as Guest (${userData.username}).`);
       } catch (err) {
         console.error("Firebase cloud guest login error:", err);
         toast.error("Failed to login as guest in Cloud Mode. Please verify that Anonymous Authentication is enabled in the Firebase Console.");
-        set({ isLoading: false });
+        set({ isLoading: false, isCreatingProfile: false });
       }
     }
   },
