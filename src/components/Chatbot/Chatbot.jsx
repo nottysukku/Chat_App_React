@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import './chatbot.css';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
 const Chatbot = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([
@@ -25,8 +25,27 @@ const Chatbot = ({ isOpen, onClose }) => {
     setInput('');
     setIsTyping(true);
 
+    const fetchWithRetry = async (url, options, retries = 3, delay = 1000) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const response = await fetch(url, options);
+          if (response.status === 503) {
+            if (i === retries - 1) return response; // Return final 503 if retries exhausted
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2; // Exponential backoff
+            continue;
+          }
+          return response;
+        } catch (err) {
+          if (i === retries - 1) throw err;
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2;
+        }
+      }
+    };
+
     try {
-      const response = await fetch(GEMINI_API_URL, {
+      const response = await fetchWithRetry(GEMINI_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -37,13 +56,18 @@ const Chatbot = ({ isOpen, onClose }) => {
         })
       });
 
+      if (response.status === 503) {
+        setMessages(prev => [...prev, { role: 'assistant', content: '⚠️ The Gemini AI service is currently busy or experiencing high traffic (503 Service Unavailable). Please wait a few seconds and try sending your question again!' }]);
+        return;
+      }
+
       const data = await response.json();
       const assistantMessage = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
       
       setMessages(prev => [...prev, { role: 'assistant', content: assistantMessage }]);
     } catch (error) {
       console.error('Gemini API error:', error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, there was an error. Please try again.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, there was a connection error. Please verify your internet connection and try again.' }]);
     } finally {
       setIsTyping(false);
     }

@@ -70,7 +70,11 @@ const Stories = ({ isOpen, onClose }) => {
       setStories(activeStories);
     } catch (error) {
       console.error("Error fetching stories:", error);
-      toast.error("Failed to load stories.");
+      if (error.code === "permission-denied" || error.message?.toLowerCase().includes("permission")) {
+        toast.error("⚠️ Stories database permissions issue! Make sure to update the security rules for stories in the Firebase Console.");
+      } else {
+        toast.error("Failed to load stories.");
+      }
     } finally {
       setLoading(false);
     }
@@ -137,7 +141,11 @@ const Stories = ({ isOpen, onClose }) => {
       fetchStories();
     } catch (error) {
       console.error("Error creating story:", error);
-      toast.error("Failed to update status.");
+      if (error.code === "permission-denied" || error.message?.toLowerCase().includes("permission")) {
+        toast.error("⚠️ Stories database permissions issue! Make sure to update the security rules for stories in the Firebase Console.");
+      } else {
+        toast.error("Failed to update status.");
+      }
     } finally {
       setUploading(false);
     }
