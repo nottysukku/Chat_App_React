@@ -8,18 +8,31 @@ import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
 import { localDb } from "../../../lib/localDb";
 import { decrypt, getChatKey } from "../../../lib/encryption";
+import { toast } from "react-toastify";
 
 const ChatList = () => {
   const [chats, setChats] = useState([]);
   const [addMode, setAddMode] = useState(false);
   const [groupMode, setGroupMode] = useState(false);
   const [input, setInput] = useState("");
+  const [onlineStatus, setOnlineStatus] = useState(navigator.onLine);
 
   const { currentUser, isLocalMode } = useUserStore();
   const { changeChat, chatId: activeChatId, isGroup: activeIsGroup, groupInfo: activeGroupInfo } = useChatStore();
 
   useEffect(() => {
-    if (isLocalMode) {
+    const handleOnline = () => setOnlineStatus(true);
+    const handleOffline = () => setOnlineStatus(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isLocalMode || !onlineStatus) {
       const fetchLocalChats = async () => {
         const localChats = localDb.getUserChats(currentUser.id);
         const promises = localChats.map(async (item) => {
@@ -70,10 +83,49 @@ const ChatList = () => {
           const userDocRef = doc(db, "users", item.receiverId);
           const userDocSnap = await getDoc(userDocRef);
           const user = userDocSnap.data();
+
+          if (user) {
+            // Cache user in local SQLite database
+            const userRows = localDb.query("SELECT * FROM users WHERE id = ?", [user.id]);
+            if (userRows.length === 0) {
+              localDb.query("INSERT INTO users (id, username, email, avatar, status) VALUES (?, ?, ?, ?, ?)", [
+                user.id,
+                user.username,
+                user.email,
+                user.avatar || "./avatar2.png",
+                user.status || ""
+              ]);
+            } else {
+              const users = localDb._getTable("users");
+              const uIdx = users.findIndex(u => u.id === user.id);
+              if (uIdx > -1) {
+                users[uIdx].username = user.username;
+                users[uIdx].avatar = user.avatar || "./avatar2.png";
+                users[uIdx].status = user.status || "";
+                localDb._setTable("users", users);
+              }
+            }
+          }
+
           return { ...item, user };
         });
 
         const chatData = await Promise.all(promises);
+
+        // Cache userchats in local SQLite simulation
+        const cachedUserchats = chatData.map(chat => ({
+          chatId: chat.chatId,
+          lastMessage: chat.lastMessage,
+          receiverId: chat.receiverId,
+          updatedAt: chat.updatedAt instanceof Date ? chat.updatedAt.getTime() : (chat.updatedAt?.seconds ? chat.updatedAt.seconds * 1000 : chat.updatedAt || Date.now()),
+          isSeen: chat.isSeen,
+          isGroup: chat.isGroup || false,
+          groupName: chat.groupName || null,
+          groupAvatar: chat.groupAvatar || null,
+          members: chat.members || null
+        }));
+        localDb.updateUserChats(currentUser.id, cachedUserchats);
+
         setChats(chatData.sort((a, b) => b.updatedAt - a.updatedAt));
       }
     );
@@ -81,7 +133,7 @@ const ChatList = () => {
     return () => {
       unSub();
     };
-  }, [currentUser.id, isLocalMode]);
+  }, [currentUser.id, isLocalMode, onlineStatus]);
 
   const handleSelect = async (chat) => {
     if (activeIsGroup && activeGroupInfo?.isAIBoredom && activeChatId !== chat.chatId) {
@@ -100,7 +152,7 @@ const ChatList = () => {
 
     userChats[chatIndex].isSeen = true;
 
-    if (isLocalMode) {
+    if (isLocalMode || !onlineStatus) {
       localDb.updateUserChats(currentUser.id, userChats);
       if (chat.isGroup) {
         changeChat(chat.chatId, chat.user, true);

@@ -440,6 +440,22 @@ html.light .main-container {
 }
 
 /* ===== Media Queries ===== */
+@media (max-width: 1024px) {
+  /* Tablet Optimization: hide detail panel, disabling custom cursors for touch screen devices */
+  .detail {
+    display: none !important;
+  }
+  .no-chat-selected {
+    border-left: 1px solid var(--border-color) !important;
+  }
+  * {
+    cursor: auto !important;
+  }
+  a, button, label, select, input[type="submit"], input[type="button"], .wa-chatlist__item, .title, .wa-header__avatar, .wa-theme-toggle {
+    cursor: pointer !important;
+  }
+}
+
 @media (max-width: 768px) {
   :root {
     --sidebar-width: 100%;
@@ -450,30 +466,32 @@ html.light .main-container {
   }
   
   .main-container {
-    margin: 0;
-    height: 100vh;
-    max-width: 100%;
+    margin: 0 !important;
+    height: 100vh !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
   }
 
   /* WhatsApp Responsive Mobile Layout */
   .chat-layout--active .wa-sidebar {
-    display: none;
+    display: none !important;
   }
   
   .chat-layout--active .detail {
-    display: none;
+    display: none !important;
   }
   
   .chat-layout:not(.chat-layout--active) .wa-chat {
-    display: none;
+    display: none !important;
   }
   
   .chat-layout:not(.chat-layout--active) .detail {
-    display: none;
+    display: none !important;
   }
   
   .chat-layout:not(.chat-layout--active) .no-chat-selected {
-    display: none;
+    display: none !important;
   }
   
   .chat-layout:not(.chat-layout--active) .wa-sidebar {

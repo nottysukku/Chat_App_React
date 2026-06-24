@@ -58,3 +58,32 @@
 .wa-header__icon-btn:active {
   background-color: var(--bg-active);
 }
+
+@media (max-width: 480px) {
+  .wa-header {
+    padding: 10px 8px !important;
+  }
+  .wa-header__left {
+    gap: 8px !important;
+  }
+  .wa-header__avatar {
+    width: 34px !important;
+    height: 34px !important;
+  }
+  .wa-header__title {
+    font-size: 13.5px !important;
+    max-width: 80px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .wa-header__actions {
+    gap: 2px !important;
+  }
+  .wa-header__icon-btn {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+  }
+}
+

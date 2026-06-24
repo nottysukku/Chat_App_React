@@ -6,8 +6,8 @@
 - 🌈 **Light and Dark Mode**: Switch themes with a single click!  
 - 🎉 **Media Sharing**: Share images and files effortlessly.  
 - 🔒 **Secure Conversations**: Enjoy end-to-end encrypted communication for peace of mind.  
-- 👥 **Group Chat Support**: Connect with friends, family, or colleagues all at once.  
-- 🎞 **Linkedin Video**: https://www.linkedin.com/posts/sukrit-chopra-5923a9215_reactjs-chatapp-firebase-activity-7285317317276712961-sZSi?utm_source=share&utm_medium=member_desktop&rcm=ACoAADZXXf4B6vuphveugSyfCD6ROy8TUfqxlng
+- 🗄️ **SQLite Offline Caching & Sync**: Real-time message storage in a local SQLite simulation (`localDb.js`) when offline. Messages sent while offline queue up locally, display a pending clock (`⏳`), and sync automatically with Firebase Firestore once network connection is restored!
+- 🗄️ **Interactive SQL Console**: Run raw SQL queries against the local database directly inside the app for easy debugging and inspection.
 
 ---
 
@@ -58,6 +58,17 @@ npm install
 ```bash
 npm start
 ```
+
+
+---
+
+## 🗄️ **SQLite Offline-First Architecture**
+This application uses a local SQLite emulation database (`localDb.js` / Web SQL simulation) to provide a fully offline-first user experience for both local and cloud modes:
+1. **Message Caching**: Every message fetched from Cloud Mode (Firebase) is automatically cached locally in the SQLite database.
+2. **Offline Mode**: If the user loses connection (`navigator.onLine === false`), the app seamlessly falls back to reading the cached messages from the SQLite database.
+3. **Message Queueing**: Outgoing messages, images, audio recordings, and shared WebRTC links sent offline are queued in SQLite with a `synced: false` flag and rendered instantly in the chat feed with a pending icon (`⏳`).
+4. **Auto-Reconnection Sync**: Upon returning online, a network status listener triggers `syncOfflineMessages()`, uploading queued messages to Firestore and updating their SQLite records to `synced: true` with a success toast.
+5. **Interactive SQL Console**: Developers can open the interactive SQL console in the header to run raw SQL queries directly on the SQLite database (e.g. `SELECT * FROM chats`, `SELECT * FROM users`, etc.).
 
 ---
 

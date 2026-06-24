@@ -477,7 +477,57 @@ html.light .wa-chat__icon-btn img {
 /* ===== Responsive styles for chat layout ===== */
 @media (max-width: 768px) {
   .wa-chat__back-btn {
-    display: flex;
+    display: flex !important;
+  }
+  .wa-chat__header {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+  }
+  .wa-chat__header-info {
+    gap: 2px !important;
+  }
+  .wa-chat__header-name {
+    font-size: 14px !important;
+    max-width: 140px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .wa-chat__header-status {
+    font-size: 11px !important;
+    max-width: 140px !important;
+  }
+  .wa-chat__header-actions {
+    gap: 8px !important;
+  }
+  .wa-chat__icon-btn {
+    padding: 6px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .wa-chat__header-name {
+    max-width: 100px !important;
+  }
+  .wa-chat__header-status {
+    max-width: 100px !important;
+  }
+  .wa-chat__input {
+    padding: 6px 8px !important;
+    gap: 8px !important;
+    min-height: 52px !important;
+  }
+  .wa-chat__input-icons {
+    gap: 8px !important;
+  }
+  .wa-chat__text-input {
+    height: 36px !important;
+    padding: 8px 12px !important;
+    font-size: 13.5px !important;
+  }
+  .wa-chat__send-btn {
+    width: 36px !important;
+    height: 36px !important;
   }
 }
 

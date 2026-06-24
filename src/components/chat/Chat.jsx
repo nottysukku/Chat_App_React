@@ -60,22 +60,38 @@ const Chat = () => {
   const [activeCallRoomId, setActiveCallRoomId] = useState(null);
   const [activeCallIsHost, setActiveCallIsHost] = useState(false);
   const [activeCallIsVideo, setActiveCallIsVideo] = useState(true);
+  const [onlineStatus, setOnlineStatus] = useState(navigator.onLine);
 
   const updateUserChatsSummary = async (lastMsgText) => {
     const userIDs = isGroup ? (groupInfo?.members || []) : [currentUser.id, user.id];
     const encryptedLastMsg = encrypt(lastMsgText, getChatKey(chatId));
     
-    if (isLocalMode) {
-      userIDs.forEach((id) => {
-        const userChats = localDb.getUserChats(id);
-        const idx = userChats.findIndex((c) => c.chatId === chatId);
-        if (idx > -1) {
-          userChats[idx].lastMessage = encryptedLastMsg;
-          userChats[idx].isSeen = id === currentUser.id;
-          userChats[idx].updatedAt = Date.now();
-          localDb.updateUserChats(id, userChats);
-        }
-      });
+    // Always update local SQLite cache first so it's instantly available and updated offline
+    userIDs.forEach((id) => {
+      const userChats = localDb.getUserChats(id);
+      const idx = userChats.findIndex((c) => c.chatId === chatId);
+      if (idx > -1) {
+        userChats[idx].lastMessage = encryptedLastMsg;
+        userChats[idx].isSeen = id === currentUser.id;
+        userChats[idx].updatedAt = Date.now();
+        localDb.updateUserChats(id, userChats);
+      } else {
+        userChats.push({
+          chatId,
+          lastMessage: encryptedLastMsg,
+          receiverId: isGroup ? null : (id === currentUser.id ? user.id : currentUser.id),
+          updatedAt: Date.now(),
+          isSeen: id === currentUser.id,
+          isGroup: isGroup,
+          groupName: isGroup ? groupInfo?.groupName : null,
+          groupAvatar: isGroup ? groupInfo?.groupAvatar : null,
+          members: isGroup ? groupInfo?.members : null
+        });
+        localDb.updateUserChats(id, userChats);
+      }
+    });
+
+    if (isLocalMode || !onlineStatus) {
       return;
     }
 
@@ -106,6 +122,22 @@ const Chat = () => {
     console.log("audioBlob:", audioBlob);
     console.log("audioUrl:", audioUrl);
   }, [audioBlob, audioUrl]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setOnlineStatus(true);
+    };
+    const handleOffline = () => {
+      setOnlineStatus(false);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -187,7 +219,7 @@ const Chat = () => {
 
   // 3. Load messages and Auto-Mark seen: true (Read Receipts)
   useEffect(() => {
-    if (isLocalMode) {
+    if (isLocalMode || !onlineStatus) {
       const fetchLocalMessages = () => {
         const chats = localDb.query("SELECT * FROM chats WHERE id = ?", [chatId]);
         const currentChat = chats[0];
@@ -224,6 +256,38 @@ const Chat = () => {
     const unSub = onSnapshot(doc(db, "chats", chatId), async (res) => {
       const data = res.data();
       if (data && data.messages) {
+        // Cache these messages in local SQLite database driver
+        const localChats = localDb._getTable("chats");
+        const idx = localChats.findIndex((c) => c.id === chatId);
+        
+        const cachedMessages = data.messages.map(msg => ({
+          ...msg,
+          createdAt: msg.createdAt?.toDate 
+            ? msg.createdAt.toDate().toISOString() 
+            : (msg.createdAt?.seconds 
+               ? new Date(msg.createdAt.seconds * 1000).toISOString() 
+               : (msg.createdAt || new Date().toISOString())),
+          synced: true // Cloud Firestore messages are always synced
+        }));
+
+        if (idx > -1) {
+          const localUnsynced = localChats[idx].messages.filter(m => m.synced === false);
+          // Combine cloud messages with local unsynced messages
+          localChats[idx].messages = [...cachedMessages, ...localUnsynced];
+          localDb._setTable("chats", localChats);
+        } else {
+          localChats.push({
+            id: chatId,
+            createdAt: data.createdAt?.toDate 
+              ? data.createdAt.toDate().toISOString() 
+              : (data.createdAt?.seconds 
+                 ? new Date(data.createdAt.seconds * 1000).toISOString() 
+                 : (data.createdAt || new Date().toISOString())),
+            messages: cachedMessages
+          });
+          localDb._setTable("chats", localChats);
+        }
+
         let updated = false;
         const updatedMessages = data.messages.map((m) => {
           if (m.senderId !== currentUser.id && !m.seen) {
@@ -249,7 +313,7 @@ const Chat = () => {
     return () => {
       unSub();
     };
-  }, [chatId, isLocalMode, currentUser.id]);
+  }, [chatId, isLocalMode, currentUser.id, onlineStatus]);
 
   // Start/stop recording logic and timer
   useEffect(() => {
@@ -310,7 +374,13 @@ const Chat = () => {
   const handleDelete = async () => {
     if (!messageToDelete) return;
 
-    if (isLocalMode) {
+    if (isLocalMode || !onlineStatus) {
+      if (!onlineStatus && !isLocalMode) {
+        toast.warn("Deleting messages is not supported while offline.");
+        setMessageToDelete(null);
+        setConfirmModal(false);
+        return;
+      }
       const chats = localDb._getTable("chats");
       const chatIndex = chats.findIndex((c) => c.id === chatId);
       if (chatIndex > -1) {
@@ -353,29 +423,39 @@ const Chat = () => {
         return;
       }
 
-      if (isLocalMode) {
+      if (isLocalMode || !onlineStatus) {
         try {
           const reader = new FileReader();
           reader.readAsDataURL(file);
           reader.onloadend = () => {
             const fileBase64 = reader.result;
             const chats = localDb._getTable("chats");
-            const chatIndex = chats.findIndex((c) => c.id === chatId);
-            if (chatIndex > -1) {
-              const encryptedImg = encrypt(fileBase64, getChatKey(chatId));
-              const newMsg = {
-                senderId: currentUser.id,
-                text: "",
-                createdAt: new Date().toISOString(),
-                img: encryptedImg,
-                type: file.type,
-                seen: false
-              };
-              chats[chatIndex].messages.push(newMsg);
-              localDb._setTable("chats", chats);
+            let chatIndex = chats.findIndex((c) => c.id === chatId);
+            
+            const encryptedImg = encrypt(fileBase64, getChatKey(chatId));
+            const newMsg = {
+              senderId: currentUser.id,
+              text: "",
+              createdAt: new Date().toISOString(),
+              img: encryptedImg,
+              type: file.type,
+              seen: false,
+              synced: isLocalMode ? true : false,
+            };
 
-              updateUserChatsSummary("[File]");
+            if (chatIndex > -1) {
+              chats[chatIndex].messages.push(newMsg);
+            } else {
+              chats.push({
+                id: chatId,
+                createdAt: Date.now(),
+                messages: [newMsg],
+              });
+              chatIndex = chats.length - 1;
             }
+            localDb._setTable("chats", chats);
+
+            updateUserChatsSummary("[File]");
             toast.success("File attached successfully!");
             endRef.current?.scrollIntoView({ behavior: "smooth" });
           };
@@ -423,25 +503,37 @@ const Chat = () => {
   const handleSend = async () => {
     if (!text.trim() && !img.file) return;
 
-    if (isLocalMode) {
+    if (isLocalMode || !onlineStatus) {
       const processSend = (imgBase64) => {
         const chats = localDb._getTable("chats");
-        const chatIndex = chats.findIndex((c) => c.id === chatId);
+        let chatIndex = chats.findIndex((c) => c.id === chatId);
+        
+        const encryptedText = encrypt(text, getChatKey(chatId));
+        const encryptedImg = imgBase64 ? encrypt(imgBase64, getChatKey(chatId)) : null;
+        const newMsg = {
+          senderId: currentUser.id,
+          text: encryptedText,
+          createdAt: new Date().toISOString(),
+          seen: false,
+          ...(encryptedImg && { img: encryptedImg }),
+          synced: isLocalMode ? true : false,
+        };
+
         if (chatIndex > -1) {
-          const encryptedText = encrypt(text, getChatKey(chatId));
-          const encryptedImg = imgBase64 ? encrypt(imgBase64, getChatKey(chatId)) : null;
-          const newMsg = {
-            senderId: currentUser.id,
-            text: encryptedText,
-            createdAt: new Date().toISOString(),
-            seen: false,
-            ...(encryptedImg && { img: encryptedImg }),
-          };
           chats[chatIndex].messages.push(newMsg);
-          localDb._setTable("chats", chats);
+        } else {
+          chats.push({
+            id: chatId,
+            createdAt: Date.now(),
+            messages: [newMsg],
+          });
+          chatIndex = chats.length - 1;
+        }
+        localDb._setTable("chats", chats);
 
-          updateUserChatsSummary(text || (imgBase64 ? "[Image]" : ""));
+        updateUserChatsSummary(text || (imgBase64 ? "[Image]" : ""));
 
+        if (isLocalMode) {
           if (!isGroup && user.id === "gemini_ai_id") {
             setTimeout(() => {
               triggerLocalGeminiResponse(chatId, [...chats[chatIndex].messages]);
@@ -564,28 +656,39 @@ const Chat = () => {
       return;
     }
   
-    if (isLocalMode) {
+    if (isLocalMode || !onlineStatus) {
       try {
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = () => {
           const audioBase64 = reader.result;
           const chats = localDb._getTable("chats");
-          const chatIndex = chats.findIndex((c) => c.id === chatId);
-          if (chatIndex > -1) {
-            const encryptedAudio = encrypt(audioBase64, getChatKey(chatId));
-            chats[chatIndex].messages.push({
-              senderId: currentUser.id,
-              text: "",
-              createdAt: new Date().toISOString(),
-              audio: encryptedAudio,
-              type: "audio",
-              seen: false
-            });
-            localDb._setTable("chats", chats);
+          let chatIndex = chats.findIndex((c) => c.id === chatId);
+          
+          const encryptedAudio = encrypt(audioBase64, getChatKey(chatId));
+          const newMsg = {
+            senderId: currentUser.id,
+            text: "",
+            createdAt: new Date().toISOString(),
+            audio: encryptedAudio,
+            type: "audio",
+            seen: false,
+            synced: isLocalMode ? true : false,
+          };
 
-            updateUserChatsSummary("[Voice Message]");
+          if (chatIndex > -1) {
+            chats[chatIndex].messages.push(newMsg);
+          } else {
+            chats.push({
+              id: chatId,
+              createdAt: Date.now(),
+              messages: [newMsg],
+            });
+            chatIndex = chats.length - 1;
           }
+          localDb._setTable("chats", chats);
+
+          updateUserChatsSummary("[Voice Message]");
           setAudioBlob(null);
           setAudioUrl(null);
           setUploadProgress(0);
@@ -661,9 +764,17 @@ const Chat = () => {
     setConfirmModalLinkedin(true);
   }
   const handleLinkedin1= () => {
+    if (!isLocalMode && !onlineStatus) {
+      toast.error("You cannot start voice calls while offline.");
+      return;
+    }
     setConfirmModalCall(true);
   }
   const handleLinkedin2= () => {
+    if (!isLocalMode && !onlineStatus) {
+      toast.error("You cannot start video calls while offline.");
+      return;
+    }
     setConfirmModalVideo(true);
   }
 
@@ -686,22 +797,32 @@ const Chat = () => {
 
       console.log(generatedLink);
 
-      if (isLocalMode) {
+      if (isLocalMode || !onlineStatus) {
         const chats = localDb._getTable("chats");
-        const chatIndex = chats.findIndex((c) => c.id === chatId);
+        let chatIndex = chats.findIndex((c) => c.id === chatId);
+        const encryptedLink = encrypt(generatedLink, getChatKey(chatId));
+        const newMsg = {
+          senderId: currentUser.id,
+          text: encryptedLink,
+          createdAt: new Date().toISOString(),
+          type: "link",
+          seen: false,
+          synced: isLocalMode ? true : false,
+        };
+
         if (chatIndex > -1) {
-          const encryptedLink = encrypt(generatedLink, getChatKey(chatId));
-          chats[chatIndex].messages.push({
-            senderId: currentUser.id,
-            text: encryptedLink,
-            createdAt: new Date().toISOString(),
-            type: "link",
-            seen: false
+          chats[chatIndex].messages.push(newMsg);
+        } else {
+          chats.push({
+            id: chatId,
+            createdAt: Date.now(),
+            messages: [newMsg],
           });
-          localDb._setTable("chats", chats);
-          updateUserChatsSummary(generatedLink);
-          toast.success("Link shared in chat!");
+          chatIndex = chats.length - 1;
         }
+        localDb._setTable("chats", chats);
+        updateUserChatsSummary(generatedLink);
+        toast.success("Link shared in chat!");
         return;
       }
 
@@ -878,7 +999,7 @@ const Chat = () => {
         });
 
         const data = await response.json();
-        const roastText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Wow, that was a pretty mid response.";
+        const roastText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Wow, press F to pay respects.";
 
         const encryptedText = encrypt(roastText, getChatKey(chatId));
 
@@ -1015,6 +1136,70 @@ const Chat = () => {
       resetChat();
     }
   };
+
+  const syncOfflineMessages = async () => {
+    if (isLocalMode || !navigator.onLine) return;
+
+    try {
+      const chats = localDb._getTable("chats");
+      let totalSynced = 0;
+
+      for (let i = 0; i < chats.length; i++) {
+        const localChat = chats[i];
+        const unsyncedMessages = localChat.messages.filter(m => m.synced === false);
+        if (unsyncedMessages.length === 0) continue;
+
+        const chatRef = doc(db, "chats", localChat.id);
+        const docSnap = await getDoc(chatRef);
+        if (!docSnap.exists()) continue;
+
+        const syncedMessages = unsyncedMessages.map(m => {
+          const firestoreMsg = {
+            senderId: m.senderId,
+            text: m.text,
+            createdAt: new Date(m.createdAt),
+            seen: m.seen,
+          };
+          if (m.img) firestoreMsg.img = m.img;
+          if (m.audio) firestoreMsg.audio = m.audio;
+          if (m.type) firestoreMsg.type = m.type;
+          if (m.callRoomId) firestoreMsg.callRoomId = m.callRoomId;
+          if (m.callActive !== undefined) firestoreMsg.callActive = m.callActive;
+          if (m.callStatus) firestoreMsg.callStatus = m.callStatus;
+          return firestoreMsg;
+        });
+
+        await updateDoc(chatRef, {
+          messages: arrayUnion(...syncedMessages)
+        });
+
+        chats[i].messages = chats[i].messages.map(m => {
+          if (m.synced === false) {
+            m.synced = true;
+          }
+          return m;
+        });
+        totalSynced += unsyncedMessages.length;
+      }
+
+      if (totalSynced > 0) {
+        localDb._setTable("chats", chats);
+        toast.success(`✅ Synced ${totalSynced} offline messages successfully!`);
+      }
+    } catch (err) {
+      console.error("Failed to sync offline messages:", err);
+      toast.error("Failed to sync some offline messages. Retrying later.");
+    }
+  };
+
+  useEffect(() => {
+    if (onlineStatus) {
+      const timer = setTimeout(() => {
+        syncOfflineMessages();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [onlineStatus]);
 
   const sendCallInvite = async (callRoomId, isVideo) => {
     const inviteText = isVideo ? "🎥 Video Call" : "📞 Voice Call";
@@ -1170,6 +1355,7 @@ const Chat = () => {
           <div className="wa-chat__header-info">
             <span className="wa-chat__header-name">{getHeaderName()}</span>
             <p className="wa-chat__header-status">
+              {!onlineStatus && <span style={{ color: "#ff9800", fontWeight: "bold", marginRight: "6px" }} title="Pending Offline Sync">⚠️ Offline |</span>}
               {getHeaderStatus()}
             </p>
           </div>
@@ -1287,7 +1473,11 @@ const Chat = () => {
                   )}
                   {message.senderId === currentUser?.id && (
                     <span className={`wa-chat__ticks ${message.seen ? "wa-chat__ticks--read" : ""}`}>
-                      {message.seen ? "✓✓" : (activeUser?.isOnline ? "✓✓" : "✓")}
+                      {message.synced === false ? (
+                        <span style={{ fontSize: "0.95em", marginRight: "2px" }} title="Pending Offline Sync">⏳</span>
+                      ) : (
+                        message.seen ? "✓✓" : (activeUser?.isOnline ? "✓✓" : "✓")
+                      )}
                     </span>
                   )}
                 </span>
