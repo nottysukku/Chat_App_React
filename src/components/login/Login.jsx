@@ -68,11 +68,10 @@ const Login = () => {
         reader.onloadend = async () => {
           const avatarBase64 = reader.result;
           const success = await signupLocal(username, email, password, avatarBase64);
-          setLoading(false);
           if (success) {
-            setIsRegisterMode(false); // Switch to login screen
-            setAvatar({ file: null, url: "" });
+            await loginLocal(email, password);
           }
+          setLoading(false);
         };
         reader.onerror = () => {
           toast.error("Failed to process local profile avatar picture.");
@@ -88,8 +87,10 @@ const Login = () => {
 
     // Standard Firebase Cloud registration
     try {
-      const res = await createUserWithEmailAndPassword(auth, email, password);
+      // Upload image first to avoid race condition on user auth state change
       const imgUrl = await upload(avatar.file);
+
+      const res = await createUserWithEmailAndPassword(auth, email, password);
 
       await setDoc(doc(db, "users", res.user.uid), {
         username,
@@ -104,9 +105,9 @@ const Login = () => {
         chats: [],
       });
 
-      toast.success("Account created successfully! You can sign in now.");
-      setIsRegisterMode(false);
-      setAvatar({ file: null, url: "" });
+      // Trigger manual store fetch to log the user in immediately
+      await useUserStore.getState().fetchUserInfo(res.user.uid);
+      toast.success(`Welcome, ${username}!`);
     } catch (err) {
       console.error(err);
       toast.error(err.message);
