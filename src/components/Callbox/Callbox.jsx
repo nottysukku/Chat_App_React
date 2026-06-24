@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import './callbox.css';
 import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 function randomID(len = 5) {
   const chars = '12345qwertyuiopasdfgh67890jklmnbvcxzMNBVCZXASDQWERTYHGFUIOLKJP';
@@ -23,72 +22,144 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink }) => {
   const [roomID, setRoomID] = useState(initialRoomID);
   const [username, setUsername] = useState('');
   const [isCustomRoomIDSet, setIsCustomRoomIDSet] = useState(false);
-  const containerRef = useRef(null);
-  const jitsiRef = useRef(null);
+  const [isHost, setIsHost] = useState(false);
+  const [callStatus, setCallStatus] = useState('Initializing Media Devices...');
+  
+  // Call States
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(!isVideoCall);
+
+  // Refs for HTML5 Video tags
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+  
+  // WebRTC refs
+  const peerRef = useRef(null);
+  const localStreamRef = useRef(null);
+  const activeCallRef = useRef(null);
 
   useEffect(() => {
     if (!isCustomRoomIDSet || !roomID) return;
 
-    // Load Jitsi Meet external API script dynamically
+    // Load PeerJS external library dynamically
     const script = document.createElement('script');
-    script.src = 'https://meet.jit.si/external_api.js';
+    script.src = 'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js';
     script.async = true;
     
-    script.onload = () => {
-      if (!containerRef.current) return;
-
-      const domain = 'meet.jit.si';
-      const options = {
-        roomName: `ChatAppRoom_${roomID}`,
-        width: '100%',
-        height: '100%',
-        parentNode: containerRef.current,
-        userInfo: {
-          displayName: username || `User_${randomID(4)}`
-        },
-        configOverwrite: {
-          startWithAudioMuted: false,
-          startWithVideoMuted: !isVideoCall,
-          prejoinPageEnabled: false, // Skip prejoin page to connect instantly
-        },
-        interfaceConfigOverwrite: {
-          TOOLBAR_BUTTONS: [
-            'microphone', 'camera', 'closedcaptions', 'desktop', 'embedmeeting', 'fullscreen',
-            'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-            'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-            'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-            'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-            'security'
-          ]
-        }
-      };
-
+    script.onload = async () => {
       try {
-        const api = new window.JitsiMeetExternalAPI(domain, options);
-        jitsiRef.current = api;
-
-        api.addEventListener('videoConferenceLeft', () => {
-          onClose();
+        // Request camera and microphone access
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: isVideoCall,
+          audio: true
         });
+        localStreamRef.current = stream;
+        
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+
+        setCallStatus('Setting up Peer connection...');
+
+        if (isHost) {
+          // Register room Peer ID on public PeerJS server
+          const peer = new window.Peer(`chatapp_room_${roomID.trim()}`);
+          peerRef.current = peer;
+
+          peer.on('open', (id) => {
+            console.log('Host registered with Peer ID:', id);
+            setCallStatus('Waiting for other participant to join...');
+          });
+
+          peer.on('call', (incomingCall) => {
+            console.log('Answering incoming call...');
+            setCallStatus('Connected!');
+            activeCallRef.current = incomingCall;
+            
+            incomingCall.answer(stream);
+            incomingCall.on('stream', (remoteStream) => {
+              if (remoteVideoRef.current) {
+                remoteVideoRef.current.srcObject = remoteStream;
+              }
+            });
+
+            incomingCall.on('close', () => {
+              toast.info("Call ended by participant.");
+              onClose();
+            });
+          });
+
+          peer.on('error', (err) => {
+            console.error('Peer host error:', err);
+            if (err.type === 'id-taken') {
+              toast.error("Room ID already in use! Try joining the room or use a different room ID.");
+            } else {
+              toast.error("Call setup error. Please try again.");
+            }
+            onClose();
+          });
+
+        } else {
+          // Joiner registers with a random guest ID
+          const peer = new window.Peer(`chatapp_guest_${randomID(5)}`);
+          peerRef.current = peer;
+
+          peer.on('open', (id) => {
+            console.log('Guest registered with Peer ID:', id);
+            setCallStatus('Connecting to call room host...');
+            
+            // Call the host room ID
+            const outgoingCall = peer.call(`chatapp_room_${roomID.trim()}`, stream);
+            activeCallRef.current = outgoingCall;
+
+            outgoingCall.on('stream', (remoteStream) => {
+              setCallStatus('Connected!');
+              if (remoteVideoRef.current) {
+                remoteVideoRef.current.srcObject = remoteStream;
+              }
+            });
+
+            outgoingCall.on('close', () => {
+              toast.info("Call ended by host.");
+              onClose();
+            });
+          });
+
+          peer.on('error', (err) => {
+            console.error('Peer guest error:', err);
+            toast.error("Could not find or connect to the call. Make sure the Host has created and shared the Room ID first!");
+            onClose();
+          });
+        }
+
       } catch (err) {
-        console.error("Jitsi Meet initialization failed:", err);
-        toast.error("Failed to start the call. Please try again.");
+        console.error("WebRTC getUserMedia media device access failed:", err);
+        toast.error("Failed to access camera/microphone! Please check permissions.");
+        onClose();
       }
     };
 
     script.onerror = () => {
-      toast.error("Failed to load call libraries. Check your internet connection.");
+      toast.error("Failed to load WebRTC libraries. Check your connection.");
+      onClose();
     };
 
     document.body.appendChild(script);
 
     return () => {
-      if (jitsiRef.current && typeof jitsiRef.current.dispose === 'function') {
-        jitsiRef.current.dispose();
+      // Clean up hardware streams and peer connections
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (activeCallRef.current) {
+        activeCallRef.current.close();
+      }
+      if (peerRef.current) {
+        peerRef.current.destroy();
       }
       script.remove();
     };
-  }, [roomID, isVideoCall, onClose, isCustomRoomIDSet, username]);
+  }, [roomID, isVideoCall, onClose, isCustomRoomIDSet, isHost]);
 
   const handleClose = useCallback(() => {
     onClose();
@@ -111,8 +182,9 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink }) => {
     return true;
   };
 
-  const handleConfirmRoomID = () => {
+  const handleCreateRoom = () => {
     if (validateInput()) {
+      setIsHost(true);
       setIsCustomRoomIDSet(true);
       handleShareLink();
     }
@@ -120,40 +192,64 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink }) => {
 
   const handleJoinRoom = () => {
     if (validateInput()) {
+      setIsHost(false);
       setIsCustomRoomIDSet(true);
+    }
+  };
+
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
+    }
+  };
+
+  const toggleCamera = () => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoOff(!videoTrack.enabled);
+      }
     }
   };
 
   return (
     <div className="call-modal-overlay call-box-container">
-      <div className="call-modal-container">
+      <div className="call-modal-container call-modal-container--pure-webrtc">
         {!isCustomRoomIDSet ? (
           <div className="room-id-input-section">
+            <h3 style={{ color: "#fff", marginBottom: "20px", textAlign: "center" }}>
+              ⚡ Peer-to-Peer Secure Call (WebRTC)
+            </h3>
             <input
               type="text"
               className="room-id-input"
               value={roomID}
               onChange={(e) => setRoomID(e.target.value)}
-              placeholder="Enter room ID"
+              placeholder="Enter Room ID"
             />
             <input
               type="text"
               className="room-id-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder="Enter your Name"
               style={{ marginTop: "10px" }}
             />
             <button 
               className="confirm-room-id-button" 
-              style={{ marginLeft: "40px", marginTop: "10px" }} 
-              onClick={handleConfirmRoomID}
+              style={{ width: "80%", margin: "15px auto 0 auto", display: "block" }} 
+              onClick={handleCreateRoom}
             >
               Create and Share Room
             </button>
             <button 
-              className="confirm-room-id-button" 
-              style={{ marginLeft: "40px", marginTop: "10px" }} 
+              className="confirm-room-id-button confirm-room-id-button--join" 
+              style={{ width: "80%", margin: "10px auto 0 auto", display: "block" }} 
               onClick={handleJoinRoom}
             >
               Join Room
@@ -163,16 +259,71 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink }) => {
             </div>
           </div>
         ) : (
-          <>
-            <div className="share-link-section">
-              <p>Room ID: {roomID} </p>
-              <p style={{marginLeft:"10px"}}> Username: {username}</p>
+          <div className="webrtc-call__screen">
+            {/* Call Info HUD */}
+            <div className="webrtc-call__hud">
+              <span className="webrtc-call__room-hud">Room: {roomID}</span>
+              <span className="webrtc-call__status-hud">{callStatus}</span>
             </div>
-            <div className="call-close-button" onClick={handleClose}>
-              ✕
+
+            {/* Video Streams Display */}
+            <div className="webrtc-call__video-grid">
+              {/* Remote Video (takes up background/fullscreen) */}
+              <div className="webrtc-call__video-wrapper remote">
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  className="webrtc-call__video"
+                />
+                {callStatus !== 'Connected!' && (
+                  <div className="webrtc-call__waiting-indicator">
+                    <div className="webrtc-call__spinner"></div>
+                    <p>{callStatus}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Local Video Overlay (floating box) */}
+              {!isVideoOff && (
+                <div className="webrtc-call__video-wrapper local">
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="webrtc-call__video"
+                  />
+                  <span className="webrtc-call__name-tag">{username} (You)</span>
+                </div>
+              )}
             </div>
-            <div className="myCallContainer" ref={containerRef} />
-          </>
+
+            {/* Futuristic Glassmorphic Controls Bar */}
+            <div className="webrtc-call__controls">
+              <button
+                className={`webrtc-call__btn ${isMuted ? 'active' : ''}`}
+                onClick={toggleMute}
+                title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+              >
+                {isMuted ? '🎤❌' : '🎤'}
+              </button>
+              <button
+                className={`webrtc-call__btn ${isVideoOff ? 'active' : ''}`}
+                onClick={toggleCamera}
+                title={isVideoOff ? 'Turn Video On' : 'Turn Video Off'}
+              >
+                {isVideoOff ? '📷❌' : '📷'}
+              </button>
+              <button
+                className="webrtc-call__btn webrtc-call__btn--end"
+                onClick={handleClose}
+                title="Hang Up"
+              >
+                📞 Hang Up
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
