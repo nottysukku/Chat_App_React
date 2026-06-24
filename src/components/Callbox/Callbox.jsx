@@ -17,12 +17,12 @@ export function getUrlParams(url = window.location.href) {
   return new URLSearchParams(urlStr);
 }
 
-const Callbox = ({ onClose, isVideoCall = true, onShareLink }) => {
-  const initialRoomID = getUrlParams().get('roomID') || '';
+const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost: isHostProp = null }) => {
+  const initialRoomID = roomId || getUrlParams().get('roomID') || '';
   const [roomID, setRoomID] = useState(initialRoomID);
   const [username, setUsername] = useState('');
-  const [isCustomRoomIDSet, setIsCustomRoomIDSet] = useState(false);
-  const [isHost, setIsHost] = useState(false);
+  const [isCustomRoomIDSet, setIsCustomRoomIDSet] = useState(isHostProp !== null || !!roomId);
+  const [isHost, setIsHost] = useState(isHostProp !== null ? isHostProp : false);
   const [callStatus, setCallStatus] = useState('Initializing Media Devices...');
   
   // Call States

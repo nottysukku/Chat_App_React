@@ -676,3 +676,102 @@ html.light .wa-chat__icon-btn img {
   70% { transform: scale(0.9); }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* Calling Card Styles */
+.wa-chat__message--call-invite {
+  max-width: 280px !important;
+}
+
+.wa-chat__call-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+  background: rgba(30, 41, 59, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.wa-chat__call-card-icon-wrapper {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+
+.wa-chat__call-card-icon {
+  font-size: 20px;
+}
+
+.wa-chat__call-card-content {
+  text-align: center;
+}
+
+.wa-chat__call-card-title {
+  display: block;
+  font-weight: 700;
+  font-size: 14px;
+  color: #fff;
+}
+
+.wa-chat__call-card-status {
+  font-size: 11px;
+  color: #94a3b8;
+  display: block;
+  margin-top: 2px;
+}
+
+.wa-chat__call-card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.wa-chat__call-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wa-chat__call-btn--accept {
+  background: #10b981;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.wa-chat__call-btn--accept:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.wa-chat__call-btn--decline {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.wa-chat__call-btn--decline:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.wa-chat__call-btn--cancel {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.wa-chat__call-btn--cancel:hover {
+  background: rgba(148, 163, 184, 0.3);
+}

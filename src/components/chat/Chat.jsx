@@ -56,6 +56,11 @@ const Chat = () => {
   const [victoryFeedback, setVictoryFeedback] = useState("");
   const [victoryEvaluationResult, setVictoryEvaluationResult] = useState(null);
 
+  // Calling Signaling State
+  const [activeCallRoomId, setActiveCallRoomId] = useState(null);
+  const [activeCallIsHost, setActiveCallIsHost] = useState(false);
+  const [activeCallIsVideo, setActiveCallIsVideo] = useState(true);
+
   const updateUserChatsSummary = async (lastMsgText) => {
     const userIDs = isGroup ? (groupInfo?.members || []) : [currentUser.id, user.id];
     const encryptedLastMsg = encrypt(lastMsgText, getChatKey(chatId));
@@ -634,13 +639,23 @@ const Chat = () => {
 
   const handleCall = () => {
     setConfirmModalCall(false);
+    const roomId = `call_${chatId}_${Date.now()}`;
+    setActiveCallRoomId(roomId);
+    setActiveCallIsHost(true);
+    setActiveCallIsVideo(false);
     setCallboxVisible(true);
+    sendCallInvite(roomId, false);
   };
 
   const handleVideo = () => {
-    setConfirmModalVideo(false)
+    setConfirmModalVideo(false);
+    const roomId = `call_${chatId}_${Date.now()}`;
+    setActiveCallRoomId(roomId);
+    setActiveCallIsHost(true);
+    setActiveCallIsVideo(true);
     setCallboxVisible(true);
-  }
+    sendCallInvite(roomId, true);
+  };
 
   const handleLinkedin= () => {
     setConfirmModalLinkedin(true);
@@ -655,9 +670,13 @@ const Chat = () => {
   const handleCallClose = () => {
     // Small timeout to ensure smooth transition
     setTimeout(() => {
+      if (activeCallRoomId) {
+        updateCallMessageStatus(activeCallRoomId, "ended");
+      }
       setCallboxVisible(false);
       setConfirmModalCall(false);
       setConfirmModalVideo(false);
+      setActiveCallRoomId(null);
     }, 100);
   };
 
@@ -997,6 +1016,99 @@ const Chat = () => {
     }
   };
 
+  const sendCallInvite = async (callRoomId, isVideo) => {
+    const inviteText = isVideo ? "🎥 Video Call" : "📞 Voice Call";
+    const encryptedText = encrypt(inviteText, getChatKey(chatId));
+    
+    if (isLocalMode) {
+      const chats = localDb._getTable("chats");
+      const chatIndex = chats.findIndex((c) => c.id === chatId);
+      if (chatIndex > -1) {
+        const newMsg = {
+          senderId: currentUser.id,
+          text: encryptedText,
+          type: "call-invite",
+          callRoomId: callRoomId,
+          callActive: true,
+          isVideo: isVideo,
+          callStatus: "ringing",
+          createdAt: new Date().toISOString(),
+          seen: false
+        };
+        chats[chatIndex].messages.push(newMsg);
+        localDb._setTable("chats", chats);
+        updateUserChatsSummary(inviteText);
+      }
+      return;
+    }
+
+    // Cloud Mode
+    try {
+      await updateDoc(doc(db, "chats", chatId), {
+        messages: arrayUnion({
+          senderId: currentUser.id,
+          text: encryptedText,
+          type: "call-invite",
+          callRoomId: callRoomId,
+          callActive: true,
+          isVideo: isVideo,
+          callStatus: "ringing",
+          createdAt: new Date(),
+          seen: false
+        }),
+      });
+      await updateUserChatsSummary(inviteText);
+    } catch (err) {
+      console.error("Failed to send call invite:", err);
+    }
+  };
+
+  const updateCallMessageStatus = async (targetRoomId, newStatus) => {
+    if (!targetRoomId) return;
+    if (isLocalMode) {
+      const chats = localDb._getTable("chats");
+      const chatIndex = chats.findIndex((c) => c.id === chatId);
+      if (chatIndex > -1) {
+        let updated = false;
+        chats[chatIndex].messages = chats[chatIndex].messages.map((m) => {
+          if (m.type === "call-invite" && m.callRoomId === targetRoomId) {
+            m.callActive = false;
+            m.callStatus = newStatus;
+            updated = true;
+          }
+          return m;
+        });
+        if (updated) {
+          localDb._setTable("chats", chats);
+        }
+      }
+      return;
+    }
+
+    // Cloud Mode
+    try {
+      const chatRef = doc(db, "chats", chatId);
+      const docSnap = await getDoc(chatRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        let updated = false;
+        const updatedMessages = data.messages.map((m) => {
+          if (m.type === "call-invite" && m.callRoomId === targetRoomId) {
+            m.callActive = false;
+            m.callStatus = newStatus;
+            updated = true;
+          }
+          return m;
+        });
+        if (updated) {
+          await updateDoc(chatRef, { messages: updatedMessages });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update call status:", err);
+    }
+  };
+
   const handleBack = () => {
     if (isGroup && groupInfo?.isAIBoredom) {
       toast.warn("😈 You cannot leave the Boredom Zone so easily! Click 'End Chat Game' to escape.");
@@ -1081,12 +1193,63 @@ const Chat = () => {
 
         {chat?.messages?.map((message) => (
           <div
-            className={`wa-chat__message ${message.senderId === currentUser?.id ? "wa-chat__message--own" : ""} ${message.senderId === "system" ? "wa-chat__message--system" : ""}`}
+            className={`wa-chat__message ${message.senderId === currentUser?.id ? "wa-chat__message--own" : ""} ${message.senderId === "system" ? "wa-chat__message--system" : ""} ${message.type === "call-invite" ? "wa-chat__message--call-invite" : ""}`}
             key={message.createdAt}
             onMouseEnter={() => setHoveredMessage(message)}
             onMouseLeave={() => setHoveredMessage(null)}
           >
-            {message.senderId === "system" ? (
+            {message.type === "call-invite" ? (
+              <div className="wa-chat__call-card">
+                <div className="wa-chat__call-card-icon-wrapper">
+                  <span className="wa-chat__call-card-icon">{message.isVideo ? "🎥" : "📞"}</span>
+                </div>
+                <div className="wa-chat__call-card-content">
+                  <span className="wa-chat__call-card-title">
+                    {message.isVideo ? "Video Call" : "Voice Call"}
+                  </span>
+                  <span className="wa-chat__call-card-status">
+                    {message.callActive 
+                      ? (message.senderId === currentUser.id ? "Outgoing call..." : "Incoming call...") 
+                      : (message.callStatus === "ended" ? "Call Ended" : 
+                         message.callStatus === "declined" ? "Call Declined" : 
+                         message.callStatus === "cancelled" ? "Call Cancelled" : "Missed Call")
+                    }
+                  </span>
+                </div>
+                {message.callActive && (
+                  <div className="wa-chat__call-card-actions">
+                    {message.senderId !== currentUser.id ? (
+                      <>
+                        <button 
+                          className="wa-chat__call-btn wa-chat__call-btn--accept" 
+                          onClick={() => {
+                            setActiveCallRoomId(message.callRoomId);
+                            setActiveCallIsHost(false);
+                            setActiveCallIsVideo(message.isVideo);
+                            setCallboxVisible(true);
+                          }}
+                        >
+                          Accept
+                        </button>
+                        <button 
+                          className="wa-chat__call-btn wa-chat__call-btn--decline" 
+                          onClick={() => updateCallMessageStatus(message.callRoomId, "declined")}
+                        >
+                          Decline
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        className="wa-chat__call-btn wa-chat__call-btn--cancel" 
+                        onClick={() => updateCallMessageStatus(message.callRoomId, "cancelled")}
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : message.senderId === "system" ? (
               <div className="wa-chat__system-message">
                 <span>{decrypt(message.text, getChatKey(chatId))}</span>
               </div>
@@ -1346,6 +1509,9 @@ const Chat = () => {
       {/* ===== Callbox ===== */}
       {callboxVisible && (
         <Callbox
+          roomId={activeCallRoomId}
+          isHost={activeCallIsHost}
+          isVideoCall={activeCallIsVideo}
           onShareLink={handleShareLink}
           onClose={handleCallClose}
         />
