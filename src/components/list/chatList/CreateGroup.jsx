@@ -37,10 +37,10 @@ const CreateGroup = ({ isOpen, onClose }) => {
         return;
       }
 
-      // Query Firebase users list
+      // Query Firebase users list — always include doc ID as fallback
       const querySnapshot = await getDocs(collection(db, "users"));
       const allUsers = querySnapshot.docs
-        .map((docSnap) => docSnap.data())
+        .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
         .filter((u) => u.id !== currentUser.id);
       setUsers(allUsers);
     } catch (err) {
@@ -264,10 +264,27 @@ const CreateGroup = ({ isOpen, onClose }) => {
             />
           </div>
 
-          <div className="wa-group-drawer__label">Add group members</div>
+          <div className="wa-group-drawer__label">
+            Add group members
+            {selectedMembers.length > 0 && (
+              <span className="wa-group-drawer__selected-count">
+                {selectedMembers.length} selected
+              </span>
+            )}
+            <button
+              type="button"
+              className="wa-group-drawer__refresh-btn"
+              onClick={fetchUsers}
+              title="Refresh contact list"
+            >
+              🔄
+            </button>
+          </div>
           <div className="wa-group-drawer__users-list">
             {filteredUsers.length === 0 ? (
-              <div className="wa-group-drawer__empty">No contacts found</div>
+              <div className="wa-group-drawer__empty">
+                {search ? `No contacts matching "${search}"` : "No contacts found"}
+              </div>
             ) : (
               filteredUsers.map((user) => (
                 <div
@@ -277,7 +294,17 @@ const CreateGroup = ({ isOpen, onClose }) => {
                   }`}
                   onClick={() => toggleMember(user.id)}
                 >
-                  <img src={user.avatar || "./avatar2.png"} alt={user.username} className="wa-group-drawer__user-avatar" />
+                  <div className="wa-group-drawer__avatar-wrapper">
+                    <img
+                      src={user.avatar || "./avatar2.png"}
+                      alt={user.username}
+                      className="wa-group-drawer__user-avatar"
+                      onError={(e) => (e.target.src = "./avatar2.png")}
+                    />
+                    {user.isOnline && (
+                      <span className="wa-group-drawer__online-dot" />
+                    )}
+                  </div>
                   <div className="wa-group-drawer__user-info">
                     <span className="wa-group-drawer__user-name">{user.username}</span>
                     <span className="wa-group-drawer__user-status">{user.status || "Hey! I'm using Chatapp."}</span>
@@ -286,7 +313,7 @@ const CreateGroup = ({ isOpen, onClose }) => {
                     type="checkbox"
                     className="wa-group-drawer__user-checkbox"
                     checked={selectedMembers.includes(user.id)}
-                    onChange={() => {}} // toggling handled by item click
+                    onChange={() => {}}
                     disabled={loading}
                   />
                 </div>

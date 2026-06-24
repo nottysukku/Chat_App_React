@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { create } from "zustand";
 import { db, auth } from "./firebase";
 import { localDb } from "./localDb";

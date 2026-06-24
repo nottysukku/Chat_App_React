@@ -158,13 +158,8 @@
   color: var(--text-secondary);
 }
 
-.wa-group-drawer__label {
-  padding: 14px 20px 8px 20px;
-  font-size: 13px;
-  color: var(--wa-teal);
-  font-weight: 500;
-  text-transform: uppercase;
-}
+
+
 
 .wa-group-drawer__users-list {
   flex: 1;
@@ -265,4 +260,61 @@
   color: var(--text-tertiary);
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* Avatar wrapper for online dot */
+.wa-group-drawer__avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.wa-group-drawer__online-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  background: #25d366;
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
+}
+
+/* Label row with selected count and refresh */
+.wa-group-drawer__label {
+  padding: 14px 20px 8px 20px;
+  font-size: 13px;
+  color: var(--wa-teal);
+  font-weight: 500;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wa-group-drawer__selected-count {
+  background: var(--wa-teal);
+  color: #fff;
+  border-radius: 12px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.wa-group-drawer__refresh-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  padding: 4px 6px;
+  transition: transform 200ms;
+  color: var(--text-secondary);
+  text-transform: none;
+}
+
+.wa-group-drawer__refresh-btn:hover {
+  transform: rotate(180deg);
 }
