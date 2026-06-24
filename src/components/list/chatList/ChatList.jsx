@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./chatList.css";
 import AddUser from "./addUser/addUser";
+import CreateGroup from "./CreateGroup";
 import { useUserStore } from "../../../lib/userStore";
 import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
@@ -10,6 +11,7 @@ import { localDb } from "../../../lib/localDb";
 const ChatList = () => {
   const [chats, setChats] = useState([]);
   const [addMode, setAddMode] = useState(false);
+  const [groupMode, setGroupMode] = useState(false);
   const [input, setInput] = useState("");
 
   const { currentUser, isLocalMode } = useUserStore();
@@ -20,6 +22,18 @@ const ChatList = () => {
       const fetchLocalChats = async () => {
         const localChats = localDb.getUserChats(currentUser.id);
         const promises = localChats.map(async (item) => {
+          if (item.isGroup) {
+            // Group chat mock user
+            const group = {
+              id: item.chatId,
+              username: item.groupName,
+              avatar: item.groupAvatar || "./avatar2.png",
+              isGroup: true,
+              members: item.members,
+              blocked: []
+            };
+            return { ...item, user: group };
+          }
           const userRows = localDb.query("SELECT * FROM users WHERE id = ?", [item.receiverId]);
           const user = userRows[0] || { id: item.receiverId, username: "User", avatar: "./avatar2.png", blocked: [] };
           return { ...item, user };
@@ -41,6 +55,17 @@ const ChatList = () => {
         const items = res.data()?.chats || [];
 
         const promises = items.map(async (item) => {
+          if (item.isGroup) {
+            const group = {
+              id: item.chatId,
+              username: item.groupName,
+              avatar: item.groupAvatar || "./avatar2.png",
+              isGroup: true,
+              members: item.members,
+              blocked: []
+            };
+            return { ...item, user: group };
+          }
           const userDocRef = doc(db, "users", item.receiverId);
           const userDocSnap = await getDoc(userDocRef);
           const user = userDocSnap.data();
@@ -71,7 +96,11 @@ const ChatList = () => {
 
     if (isLocalMode) {
       localDb.updateUserChats(currentUser.id, userChats);
-      changeChat(chat.chatId, chat.user);
+      if (chat.isGroup) {
+        changeChat(chat.chatId, chat.user, true);
+      } else {
+        changeChat(chat.chatId, chat.user, false);
+      }
       return;
     }
 
@@ -79,14 +108,18 @@ const ChatList = () => {
 
     try {
       await updateDoc(userChatsRef, { chats: userChats });
-      changeChat(chat.chatId, chat.user);
+      if (chat.isGroup) {
+        changeChat(chat.chatId, chat.user, true);
+      } else {
+        changeChat(chat.chatId, chat.user, false);
+      }
     } catch (err) {
       console.error(err);
     }
   };
 
   const filteredChats = chats.filter((c) =>
-    c.user.username.toLowerCase().includes(input.toLowerCase())
+    c.user?.username?.toLowerCase().includes(input.toLowerCase())
   );
 
   const formatTime = (timestamp) => {
@@ -119,13 +152,23 @@ const ChatList = () => {
             onChange={(e) => setInput(e.target.value)}
           />
         </div>
-        <button
-          className="wa-chatlist__new-chat-btn"
-          onClick={() => setAddMode((prev) => !prev)}
-          title="New Chat"
-        >
-          📝
-        </button>
+        <div className="wa-chatlist__actions">
+          <button
+            className="wa-chatlist__new-chat-btn"
+            onClick={() => setGroupMode((prev) => !prev)}
+            title="New Group"
+            style={{ marginRight: "6px" }}
+          >
+            👥
+          </button>
+          <button
+            className="wa-chatlist__new-chat-btn"
+            onClick={() => setAddMode((prev) => !prev)}
+            title="New Chat"
+          >
+            📝
+          </button>
+        </div>
       </div>
 
       {/* Chat Items */}
@@ -170,6 +213,7 @@ const ChatList = () => {
       </div>
 
       {addMode && <AddUser setAddMode={setAddMode} />}
+      <CreateGroup isOpen={groupMode} onClose={() => setGroupMode(false)} />
     </div>
   );
 };

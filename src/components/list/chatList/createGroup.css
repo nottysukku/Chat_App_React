@@ -1,0 +1,268 @@
+.wa-group-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 110;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  transition: transform var(--transition-normal);
+  transform: translateX(-100%);
+  border-right: 1px solid var(--border-color);
+}
+
+.wa-group-drawer--open {
+  transform: translateX(0);
+}
+
+/* Header */
+.wa-group-drawer__header {
+  height: 110px;
+  background-color: var(--wa-teal);
+  color: #ffffff;
+  display: flex;
+  align-items: flex-end;
+  padding: 0 20px 20px 20px;
+  gap: 20px;
+}
+
+.wa-group-drawer__back-btn {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 24px;
+  cursor: pointer;
+  outline: none;
+  line-height: 1;
+  padding: 4px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--transition-fast);
+}
+
+.wa-group-drawer__back-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.wa-group-drawer__title {
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* Content */
+.wa-group-drawer__content {
+  flex: 1;
+  overflow-y: auto;
+  background-color: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Fields (Photo + Subject) */
+.wa-group-drawer__fields {
+  background-color: var(--bg-primary);
+  padding: 24px 30px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.wa-group-drawer__avatar-wrapper {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.wa-group-drawer__avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.wa-group-drawer__avatar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 9px;
+  text-align: center;
+  padding: 4px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.wa-group-drawer__avatar-wrapper:hover .wa-group-drawer__avatar-overlay {
+  opacity: 1;
+}
+
+.wa-group-drawer__input {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid var(--wa-teal);
+  outline: none;
+  color: var(--text-primary);
+  font-size: 16px;
+  padding: 6px 0;
+}
+
+.wa-group-drawer__input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* Members selection container */
+.wa-group-drawer__members-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  margin-top: 10px;
+}
+
+.wa-group-drawer__search-row {
+  padding: 10px 20px;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.wa-group-drawer__search-input {
+  width: 100%;
+  background-color: var(--bg-secondary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  padding: 8px 14px;
+  font-size: 14px;
+  outline: none;
+}
+
+.wa-group-drawer__search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.wa-group-drawer__label {
+  padding: 14px 20px 8px 20px;
+  font-size: 13px;
+  color: var(--wa-teal);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.wa-group-drawer__users-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 80px; /* space for floating submit button */
+}
+
+.wa-group-drawer__empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* User item */
+.wa-group-drawer__user-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  gap: 15px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-light);
+  transition: background-color var(--transition-fast);
+}
+
+.wa-group-drawer__user-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.wa-group-drawer__user-item--selected {
+  background-color: var(--bg-active);
+}
+
+.wa-group-drawer__user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+}
+
+.wa-group-drawer__user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wa-group-drawer__user-name {
+  font-size: 15px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.wa-group-drawer__user-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.wa-group-drawer__user-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--wa-teal);
+  cursor: pointer;
+}
+
+/* Floating Checkmark Button */
+.wa-group-drawer__submit-btn {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-full);
+  background-color: var(--wa-teal);
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition-fast), background-color var(--transition-fast);
+}
+
+.wa-group-drawer__submit-btn:hover:not(:disabled) {
+  background-color: var(--wa-dark-green);
+  transform: scale(1.05);
+}
+
+.wa-group-drawer__submit-btn:disabled {
+  background-color: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+  box-shadow: none;
+}

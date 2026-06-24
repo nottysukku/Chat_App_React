@@ -4,17 +4,52 @@ import Detail from './components/detail/Detail';
 import List from './components/list/List';
 import Login from './components/login/Login';
 import Notification from './components/notification/Notification';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './lib/firebase';
 import { useUserStore } from './lib/userStore';
 import { useChatStore } from './lib/chatStore';
 import './index.css';
 
 const App = () => {
-  const { currentUser, isLoading, fetchUserInfo } = useUserStore();
+  const { currentUser, isLoading, fetchUserInfo, updateUserOnlineStatus, isLocalMode } = useUserStore();
   const { chatId } = useChatStore();
 
   useEffect(() => {
-    fetchUserInfo();
+    // Apply saved theme on mount
+    const savedTheme = localStorage.getItem("chat_app_theme") || "theme-green";
+    document.documentElement.className = savedTheme;
+
+    const unSub = onAuthStateChanged(auth, (user) => {
+      fetchUserInfo(user?.uid);
+    });
+    return () => unSub();
   }, [fetchUserInfo]);
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      // Mark user as online
+      updateUserOnlineStatus(currentUser.id, true);
+
+      // Run DB health check to seed mock users/messages if it's cloud mode
+      if (!isLocalMode) {
+        import('./lib/dbHealthCheck').then(({ runDbHealthCheck }) => {
+          runDbHealthCheck(currentUser);
+        });
+      }
+
+      const handleUnload = () => {
+        updateUserOnlineStatus(currentUser.id, false);
+      };
+
+      window.addEventListener("beforeunload", handleUnload);
+
+      return () => {
+        window.removeEventListener("beforeunload", handleUnload);
+        // Mark user as offline when component unmounts or user changes
+        updateUserOnlineStatus(currentUser.id, false);
+      };
+    }
+  }, [currentUser?.id, isLocalMode, updateUserOnlineStatus, currentUser]);
 
   if (isLoading) {
     return (

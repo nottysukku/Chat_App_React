@@ -1,23 +1,44 @@
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { create } from "zustand";
+import { db, auth } from "./firebase";
 import { localDb } from "./localDb";
 import { toast } from "react-toastify";
 
-export const useUserStore = create((set) => ({
+export const useUserStore = create((set, get) => ({
   currentUser: null,
   isLoading: true,
-  isLocalMode: true, // Always run in SQLite/Local storage mode for this build
+  isLocalMode: localStorage.getItem("is_local_mode") === "true",
 
-  fetchUserInfo: async () => {
-    try {
+  fetchUserInfo: async (uid) => {
+    if (!uid) {
+      const isLocal = localStorage.getItem("is_local_mode") === "true";
       const localUser = localStorage.getItem("local_current_user");
-      if (localUser) {
-        set({ currentUser: JSON.parse(localUser), isLocalMode: true, isLoading: false });
+      if (isLocal && localUser) {
+        return set({ currentUser: JSON.parse(localUser), isLocalMode: true, isLoading: false });
+      }
+      return set({ currentUser: null, isLocalMode: false, isLoading: false });
+    }
+
+    try {
+      const docRef = doc(db, "users", uid);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        if (!userData.id) userData.id = uid;
+        localStorage.setItem("is_local_mode", "false");
+        set({ currentUser: userData, isLocalMode: false, isLoading: false });
       } else {
-        set({ currentUser: null, isLocalMode: true, isLoading: false });
+        set({ currentUser: null, isLocalMode: false, isLoading: false });
       }
     } catch (err) {
-      console.error("fetchUserInfo error:", err);
-      set({ currentUser: null, isLocalMode: true, isLoading: false });
+      console.error("Firebase fetch user info error, falling back:", err);
+      const isLocal = localStorage.getItem("is_local_mode") === "true";
+      const localUser = localStorage.getItem("local_current_user");
+      if (isLocal && localUser) {
+        return set({ currentUser: JSON.parse(localUser), isLocalMode: true, isLoading: false });
+      }
+      return set({ currentUser: null, isLocalMode: false, isLoading: false });
     }
   },
 
@@ -76,11 +97,11 @@ export const useUserStore = create((set) => ({
       }
 
       window.dispatchEvent(new CustomEvent("local-db-update"));
-      toast.success("Account created successfully! You can sign in now.");
+      toast.success("Local account created successfully! You can sign in now.");
       return true;
     } catch (err) {
-      console.error("Signup error:", err);
-      toast.error("An error occurred during sign up.");
+      console.error("Local signup error:", err);
+      toast.error("An error occurred during local sign up.");
       return false;
     }
   },
@@ -104,32 +125,75 @@ export const useUserStore = create((set) => ({
       toast.success(`Welcome back, ${user.username}!`);
       return true;
     } catch (err) {
-      console.error("Login error:", err);
-      toast.error("An error occurred during sign in.");
+      console.error("Local login error:", err);
+      toast.error("An error occurred during local sign in.");
       return false;
     }
   },
 
   logoutGuest: () => {
+    const isLocal = get().isLocalMode;
+    const uid = get().currentUser?.id;
+    if (uid) {
+      get().updateUserOnlineStatus(uid, false);
+    }
     localStorage.removeItem("is_local_mode");
     localStorage.removeItem("local_current_user");
-    set({ currentUser: null, isLocalMode: true, isLoading: false });
+    set({ currentUser: null, isLocalMode: false, isLoading: false });
+    if (!isLocal) {
+      auth.signOut();
+    }
     toast.success("Logged out successfully.");
   },
 
-  updateUserInfo: async (updatedData) => {
-    set((state) => {
-      const newUser = { ...state.currentUser, ...updatedData };
-      localStorage.setItem("local_current_user", JSON.stringify(newUser));
-      // Update user in localDb
+  updateUserOnlineStatus: async (uid, isOnline) => {
+    const isLocal = get().isLocalMode;
+    if (isLocal) {
       const users = JSON.parse(localStorage.getItem("sqlite_users") || "[]");
-      const idx = users.findIndex(u => u.id === newUser.id);
+      const idx = users.findIndex(u => u.id === uid);
       if (idx > -1) {
-        users[idx] = { ...users[idx], ...updatedData };
+        users[idx].isOnline = isOnline;
+        users[idx].lastActive = Date.now();
         localStorage.setItem("sqlite_users", JSON.stringify(users));
         window.dispatchEvent(new CustomEvent("local-db-update"));
       }
-      return { currentUser: newUser };
-    });
+    } else if (uid) {
+      try {
+        const userRef = doc(db, "users", uid);
+        await updateDoc(userRef, {
+          isOnline: isOnline,
+          lastActive: Date.now()
+        });
+      } catch (err) {
+        console.error("Failed to update Firestore user online status:", err);
+      }
+    }
+  },
+
+  updateUserInfo: async (updatedData) => {
+    const { isLocalMode, currentUser } = get();
+    if (isLocalMode) {
+      set((state) => {
+        const newUser = { ...state.currentUser, ...updatedData };
+        localStorage.setItem("local_current_user", JSON.stringify(newUser));
+        // Update user in localDb
+        const users = JSON.parse(localStorage.getItem("sqlite_users") || "[]");
+        const idx = users.findIndex(u => u.id === newUser.id);
+        if (idx > -1) {
+          users[idx] = { ...users[idx], ...updatedData };
+          localStorage.setItem("sqlite_users", JSON.stringify(users));
+          window.dispatchEvent(new CustomEvent("local-db-update"));
+        }
+        return { currentUser: newUser };
+      });
+    } else if (currentUser?.id) {
+      set((state) => ({ currentUser: { ...state.currentUser, ...updatedData } }));
+      try {
+        const userRef = doc(db, "users", currentUser.id);
+        await updateDoc(userRef, updatedData);
+      } catch (err) {
+        console.error("Failed to update Firestore user info:", err);
+      }
+    }
   }
 }));

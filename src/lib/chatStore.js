@@ -4,35 +4,55 @@ import { useUserStore } from "./userStore";
 export const useChatStore = create((set) => ({
   chatId: null,
   user: null,
+  isGroup: false,
+  groupInfo: null, // { id, groupName, groupAvatar, members }
   userStatus: null,  // Track user status here
   isCurrentUserBlocked: false,
   isReceiverBlocked: false,
 
-  // Change chat and user details, including status
-  changeChat: (chatId, user) => {
-    const currentUser = useUserStore.getState().currentUser;
-
-    if (user.blocked.includes(currentUser.id)) {
+  // Change chat and user details, including status and group support
+  changeChat: (chatId, info, isGroupChat = false) => {
+    if (isGroupChat) {
       return set({
         chatId,
         user: null,
+        isGroup: true,
+        groupInfo: info,
+        userStatus: null,
+        isCurrentUserBlocked: false,
+        isReceiverBlocked: false,
+      });
+    }
+
+    const currentUser = useUserStore.getState().currentUser;
+
+    if (info.blocked.includes(currentUser.id)) {
+      return set({
+        chatId,
+        user: null,
+        isGroup: false,
+        groupInfo: null,
         userStatus: null,  // Reset status if user is blocked
         isCurrentUserBlocked: true,
         isReceiverBlocked: false,
       });
-    } else if (currentUser.blocked.includes(user.id)) {
+    } else if (currentUser.blocked.includes(info.id)) {
       return set({
         chatId,
-        user: user,
-        userStatus: user.status,  // Fetch the status from the user object
+        user: info,
+        isGroup: false,
+        groupInfo: null,
+        userStatus: info.status,  // Fetch the status from the user object
         isCurrentUserBlocked: false,
         isReceiverBlocked: true,
       });
     } else {
       return set({
         chatId,
-        user,
-        userStatus: user.status || "Hey! I'm using Chatapp.",  // Default status if not set
+        user: info,
+        isGroup: false,
+        groupInfo: null,
+        userStatus: info.status || "Hey! I'm using Chatapp.",  // Default status if not set
         isCurrentUserBlocked: false,
         isReceiverBlocked: false,
       });
@@ -57,6 +77,8 @@ export const useChatStore = create((set) => ({
     set({
       chatId: null,
       user: null,
+      isGroup: false,
+      groupInfo: null,
       userStatus: null,  // Reset status on chat reset
       isCurrentUserBlocked: false,
       isReceiverBlocked: false,

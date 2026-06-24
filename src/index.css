@@ -81,6 +81,109 @@ html.light {
   --shadow-lg: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
+/* ===== Theme Styles & Custom Variables ===== */
+
+/* Blue Theme (Cobalt Ocean) */
+html.theme-blue {
+  --wa-teal: #0c4a6e;
+  --wa-dark-green: #082f49;
+  --text-green: #38bdf8;
+  --bubble-outgoing: #0369a1;
+}
+html.light.theme-blue {
+  --wa-teal: #0284c7;
+  --wa-dark-green: #0369a1;
+  --text-green: #0ea5e9;
+  --bubble-outgoing: #e0f2fe;
+}
+
+/* Purple Theme (Royal Amethyst) */
+html.theme-purple {
+  --wa-teal: #4c1d95;
+  --wa-dark-green: #2e1065;
+  --text-green: #c084fc;
+  --bubble-outgoing: #581c87;
+}
+html.light.theme-purple {
+  --wa-teal: #7c3aed;
+  --wa-dark-green: #5b21b6;
+  --text-green: #8b5cf6;
+  --bubble-outgoing: #edd8ff;
+}
+
+/* Amber Theme (Desert Sunset) */
+html.theme-amber {
+  --wa-teal: #78350f;
+  --wa-dark-green: #451a03;
+  --text-green: #fbbf24;
+  --bubble-outgoing: #b45309;
+}
+html.light.theme-amber {
+  --wa-teal: #d97706;
+  --wa-dark-green: #b45309;
+  --text-green: #f59e0b;
+  --bubble-outgoing: #fef3c7;
+}
+
+/* Dark Green Theme (Forest Grove) */
+html.theme-darkgreen {
+  --wa-teal: #14532d;
+  --wa-dark-green: #064e3b;
+  --text-green: #4ade80;
+  --bubble-outgoing: #166534;
+}
+html.light.theme-darkgreen {
+  --wa-teal: #16a34a;
+  --wa-dark-green: #15803d;
+  --text-green: #22c55e;
+  --bubble-outgoing: #dcfce7;
+}
+
+/* ===== Micro-Animations & Motion ===== */
+.wa-header__icon-btn:active,
+.wa-chatlist__item:active,
+.login__submit-btn:active,
+.login__guest-btn:active,
+.wa-profile-drawer__back-btn:active,
+.wa-profile-drawer__pencil-btn:active,
+.wa-stories__close:active,
+.wa-stories__submit:active,
+.confirm-room-id-button:active {
+  transform: scale(0.96) !important;
+  transition: transform var(--transition-fast) !important;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wa-chat__message {
+  animation: fadeInUp 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.wa-newchat__modal-box,
+.wa-stories__container {
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
 /* ===== Reset & Base ===== */
 *, *::before, *::after {
   margin: 0;

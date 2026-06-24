@@ -40,8 +40,50 @@ const Chat = () => {
   const chunks = useRef([]);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [callboxVisible, setCallboxVisible] = useState(false);
-  const { chatId, user, isCurrentUserBlocked, isReceiverBlocked, resetChat } = useChatStore();
+  const { chatId, user, isGroup, groupInfo, isCurrentUserBlocked, isReceiverBlocked, resetChat } = useChatStore();
+  const [activeUser, setActiveUser] = useState(user);
+  const [groupMembers, setGroupMembers] = useState([]);
   const endRef = useRef(null);
+
+  const updateUserChatsSummary = async (lastMsgText) => {
+    const userIDs = isGroup ? (groupInfo?.members || []) : [currentUser.id, user.id];
+    
+    if (isLocalMode) {
+      userIDs.forEach((id) => {
+        const userChats = localDb.getUserChats(id);
+        const idx = userChats.findIndex((c) => c.chatId === chatId);
+        if (idx > -1) {
+          userChats[idx].lastMessage = lastMsgText;
+          userChats[idx].isSeen = id === currentUser.id;
+          userChats[idx].updatedAt = Date.now();
+          localDb.updateUserChats(id, userChats);
+        }
+      });
+      return;
+    }
+
+    // Cloud Firebase mode
+    try {
+      for (const id of userIDs) {
+        const userChatsRef = doc(db, "userchats", id);
+        const userChatsSnapshot = await getDoc(userChatsRef);
+
+        if (userChatsSnapshot.exists()) {
+          const userChatsData = userChatsSnapshot.data();
+          const chatIndex = userChatsData.chats.findIndex((c) => c.chatId === chatId);
+
+          if (chatIndex >= 0) {
+            userChatsData.chats[chatIndex].lastMessage = lastMsgText;
+            userChatsData.chats[chatIndex].isSeen = id === currentUser.id;
+            userChatsData.chats[chatIndex].updatedAt = Date.now();
+            await updateDoc(userChatsRef, { chats: userChatsData.chats });
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update userchats summaries in Firebase:", err);
+    }
+  };
 
   useEffect(() => {
     console.log("audioBlob:", audioBlob);
@@ -52,12 +94,96 @@ const Chat = () => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat?.messages]);
 
+  // 1. Sync User / Group Status and Details in real-time
+  useEffect(() => {
+    setActiveUser(user);
+    if (!user || isGroup) return;
+
+    if (isLocalMode) {
+      const fetchUserData = () => {
+        const users = JSON.parse(localStorage.getItem("sqlite_users") || "[]");
+        const found = users.find(u => u.id === user.id);
+        if (found) {
+          setActiveUser(found);
+        }
+      };
+      fetchUserData();
+      window.addEventListener("local-db-update", fetchUserData);
+      return () => {
+        window.removeEventListener("local-db-update", fetchUserData);
+      };
+    } else {
+      const unSub = onSnapshot(doc(db, "users", user.id), (res) => {
+        if (res.exists()) {
+          setActiveUser(res.data());
+        }
+      });
+      return () => unSub();
+    }
+  }, [user, chatId, isLocalMode, isGroup]);
+
+  // 2. Fetch Group Members' details
+  useEffect(() => {
+    if (!isGroup || !groupInfo) {
+      setGroupMembers([]);
+      return;
+    }
+
+    const fetchGroupMembers = async () => {
+      try {
+        if (isLocalMode) {
+          const allUsers = JSON.parse(localStorage.getItem("sqlite_users") || "[]");
+          const members = allUsers.filter(u => groupInfo.members.includes(u.id));
+          setGroupMembers(members);
+        } else {
+          const members = [];
+          for (const memberId of groupInfo.members) {
+            const userDocSnap = await getDoc(doc(db, "users", memberId));
+            if (userDocSnap.exists()) {
+              members.push(userDocSnap.data());
+            }
+          }
+          setGroupMembers(members);
+        }
+      } catch (err) {
+        console.error("Error fetching group members details:", err);
+      }
+    };
+
+    fetchGroupMembers();
+    if (isLocalMode) {
+      window.addEventListener("local-db-update", fetchGroupMembers);
+      return () => window.removeEventListener("local-db-update", fetchGroupMembers);
+    }
+  }, [chatId, isGroup, groupInfo, isLocalMode]);
+
+  // 3. Load messages and Auto-Mark seen: true (Read Receipts)
   useEffect(() => {
     if (isLocalMode) {
       const fetchLocalMessages = () => {
         const chats = localDb.query("SELECT * FROM chats WHERE id = ?", [chatId]);
         const currentChat = chats[0];
-        setChat(currentChat || { messages: [] });
+        if (currentChat && currentChat.messages) {
+          let updated = false;
+          const updatedMessages = currentChat.messages.map((m) => {
+            if (m.senderId !== currentUser.id && !m.seen) {
+              m.seen = true;
+              updated = true;
+            }
+            return m;
+          });
+          if (updated) {
+            const allChats = localDb._getTable("chats");
+            const idx = allChats.findIndex((c) => c.id === chatId);
+            if (idx > -1) {
+              allChats[idx].messages = updatedMessages;
+              localDb._setTable("chats", allChats);
+            }
+          }
+          setChat(currentChat);
+        } else {
+          setChat(currentChat || { messages: [] });
+        }
       };
 
       fetchLocalMessages();
@@ -67,14 +193,35 @@ const Chat = () => {
       };
     }
 
-    const unSub = onSnapshot(doc(db, "chats", chatId), (res) => {
-      setChat(res.data());
+    const unSub = onSnapshot(doc(db, "chats", chatId), async (res) => {
+      const data = res.data();
+      if (data && data.messages) {
+        let updated = false;
+        const updatedMessages = data.messages.map((m) => {
+          if (m.senderId !== currentUser.id && !m.seen) {
+            m.seen = true;
+            updated = true;
+          }
+          return m;
+        });
+
+        if (updated) {
+          try {
+            await updateDoc(doc(db, "chats", chatId), {
+              messages: updatedMessages,
+            });
+          } catch (err) {
+            console.error("Failed to update messages seen status:", err);
+          }
+        }
+      }
+      setChat(data);
     });
 
     return () => {
       unSub();
     };
-  }, [chatId, isLocalMode]);
+  }, [chatId, isLocalMode, currentUser.id]);
 
   // Start/stop recording logic and timer
   useEffect(() => {
@@ -193,21 +340,12 @@ const Chat = () => {
                 createdAt: new Date().toISOString(),
                 img: fileBase64,
                 type: file.type,
+                seen: false
               };
               chats[chatIndex].messages.push(newMsg);
               localDb._setTable("chats", chats);
 
-              const userIDs = [currentUser.id, user.id];
-              userIDs.forEach((id) => {
-                const userChats = localDb.getUserChats(id);
-                const idx = userChats.findIndex((c) => c.chatId === chatId);
-                if (idx > -1) {
-                  userChats[idx].lastMessage = "[File]";
-                  userChats[idx].isSeen = id === currentUser.id;
-                  userChats[idx].updatedAt = Date.now();
-                  localDb.updateUserChats(id, userChats);
-                }
-              });
+              updateUserChatsSummary("[File]");
             }
             toast.success("File attached successfully!");
             endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -234,10 +372,12 @@ const Chat = () => {
               createdAt: new Date(),
               img: fileUrl,
               type: file.type,
+              seen: false
             },
           ],
         });
 
+        await updateUserChatsSummary("[File]");
         toast.success("File uploaded successfully!");
       } catch (error) {
         console.error("Error uploading file:", error);
@@ -261,24 +401,15 @@ const Chat = () => {
             senderId: currentUser.id,
             text,
             createdAt: new Date().toISOString(),
+            seen: false,
             ...(imgBase64 && { img: imgBase64 }),
           };
           chats[chatIndex].messages.push(newMsg);
           localDb._setTable("chats", chats);
 
-          const userIDs = [currentUser.id, user.id];
-          userIDs.forEach((id) => {
-            const userChats = localDb.getUserChats(id);
-            const idx = userChats.findIndex((c) => c.chatId === chatId);
-            if (idx > -1) {
-              userChats[idx].lastMessage = text || (imgBase64 ? "[Image]" : "");
-              userChats[idx].isSeen = id === currentUser.id;
-              userChats[idx].updatedAt = Date.now();
-              localDb.updateUserChats(id, userChats);
-            }
-          });
+          updateUserChatsSummary(text || (imgBase64 ? "[Image]" : ""));
 
-          if (user.id === "gemini_ai_id") {
+          if (!isGroup && user.id === "gemini_ai_id") {
             setTimeout(() => {
               triggerLocalGeminiResponse(chatId, [...chats[chatIndex].messages]);
             }, 1000);
@@ -319,28 +450,12 @@ const Chat = () => {
           senderId: currentUser.id,
           text,
           createdAt: new Date(),
+          seen: false,
           ...(imgUrl && { img: imgUrl }),
         }),
       });
 
-      // Update user chat details for both users
-      const userIDs = [currentUser.id, user.id];
-      for (const id of userIDs) {
-        const userChatsRef = doc(db, "userchats", id);
-        const userChatsSnapshot = await getDoc(userChatsRef);
-
-        if (userChatsSnapshot.exists()) {
-          const userChatsData = userChatsSnapshot.data();
-          const chatIndex = userChatsData.chats.findIndex((c) => c.chatId === chatId);
-
-          if (chatIndex >= 0) {
-            userChatsData.chats[chatIndex].lastMessage = text;
-            userChatsData.chats[chatIndex].isSeen = id === currentUser.id;
-            userChatsData.chats[chatIndex].updatedAt = Date.now();
-            await updateDoc(userChatsRef, { chats: userChatsData.chats });
-          }
-        }
-      }
+      await updateUserChatsSummary(text || (imgUrl ? "[Image]" : ""));
 
       // Show success toast if image was uploaded
       if (img.file) {
@@ -416,20 +531,11 @@ const Chat = () => {
               createdAt: new Date().toISOString(),
               audio: audioBase64,
               type: "audio",
+              seen: false
             });
             localDb._setTable("chats", chats);
 
-            const userIDs = [currentUser.id, user.id];
-            userIDs.forEach((id) => {
-              const userChats = localDb.getUserChats(id);
-              const idx = userChats.findIndex((c) => c.chatId === chatId);
-              if (idx > -1) {
-                userChats[idx].lastMessage = "[Voice Message]";
-                userChats[idx].isSeen = id === currentUser.id;
-                userChats[idx].updatedAt = Date.now();
-                localDb.updateUserChats(id, userChats);
-              }
-            });
+            updateUserChatsSummary("[Voice Message]");
           }
           setAudioBlob(null);
           setAudioUrl(null);
@@ -464,9 +570,11 @@ const Chat = () => {
           createdAt: new Date(),
           audio: audioUrl,  // Use the uploaded audio URL
           type: "audio",
+          seen: false
         }),
       });
   
+      await updateUserChatsSummary("[Voice Message]");
       toast.success("Audio message sent!");
     } catch (error) {
       console.error("Error sending audio message:", error);
@@ -513,6 +621,24 @@ const Chat = () => {
 
       console.log(generatedLink);
 
+      if (isLocalMode) {
+        const chats = localDb._getTable("chats");
+        const chatIndex = chats.findIndex((c) => c.id === chatId);
+        if (chatIndex > -1) {
+          chats[chatIndex].messages.push({
+            senderId: currentUser.id,
+            text: generatedLink,
+            createdAt: new Date().toISOString(),
+            type: "link",
+            seen: false
+          });
+          localDb._setTable("chats", chats);
+          updateUserChatsSummary(generatedLink);
+          toast.success("Link shared in chat!");
+        }
+        return;
+      }
+
       try {
         await updateDoc(doc(db, "chats", chatId), {
           messages: arrayUnion({
@@ -520,15 +646,17 @@ const Chat = () => {
             text: generatedLink,
             createdAt: new Date(),
             type: "link",
+            seen: false
           }),
         });
+        await updateUserChatsSummary(generatedLink);
         toast.success("Link shared in chat!");
       } catch (error) {
         console.error("Error sharing link in chat:", error);
         toast.error("Failed to share link in chat. Please try again.");
       }
     },
-    [currentUser.id, chatId]
+    [currentUser.id, chatId, isLocalMode, isGroup, groupInfo, user]
   );
 
   const triggerLocalGeminiResponse = async (chatId, currentMessages) => {
@@ -576,6 +704,40 @@ const Chat = () => {
     }
   };
 
+  const getHeaderName = () => {
+    return isGroup ? (groupInfo?.groupName || "Group Chat") : (activeUser?.username || user?.username);
+  };
+
+  const getHeaderAvatar = () => {
+    return isGroup ? (groupInfo?.groupAvatar || "./avatar2.png") : (activeUser?.avatar || user?.avatar || "./avatar2.png");
+  };
+
+  const getHeaderStatus = () => {
+    if (isGroup) {
+      if (groupMembers.length > 0) {
+        return groupMembers.map(m => m.id === currentUser.id ? "You" : m.username).join(", ");
+      }
+      return "Loading group members...";
+    }
+    return activeUser?.isOnline ? "Online" : (activeUser?.status || "Hey! I'm using Chatapp");
+  };
+
+  const getSenderColor = (senderId) => {
+    const colors = ["#e91e63", "#9c27b0", "#673ab7", "#3f51b5", "#2196f3", "#03a9f4", "#00bcd4", "#009688", "#4caf50", "#8bc34a", "#ff9800", "#ff5722"];
+    let hash = 0;
+    for (let i = 0; i < senderId.length; i++) {
+      hash = senderId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash % colors.length);
+    return colors[index];
+  };
+
+  const getSenderName = (senderId) => {
+    if (senderId === "system") return "";
+    const member = groupMembers.find(m => m.id === senderId);
+    return member ? member.username : "Group Member";
+  };
+
   return (
     <div className="wa-chat">
       {/* ===== Header ===== */}
@@ -586,13 +748,13 @@ const Chat = () => {
         <div className="wa-chat__header-user">
           <img
             className="wa-chat__header-avatar"
-            src={user?.avatar || "./avatar2.png"}
+            src={getHeaderAvatar()}
             alt=""
           />
           <div className="wa-chat__header-info">
-            <span className="wa-chat__header-name">{user?.username}</span>
+            <span className="wa-chat__header-name">{getHeaderName()}</span>
             <p className="wa-chat__header-status">
-              {user?.status || "Hey! I'm using Chatapp"}
+              {getHeaderStatus()}
             </p>
           </div>
         </div>
@@ -615,40 +777,59 @@ const Chat = () => {
 
         {chat?.messages?.map((message) => (
           <div
-            className={`wa-chat__message ${message.senderId === currentUser?.id ? "wa-chat__message--own" : ""}`}
+            className={`wa-chat__message ${message.senderId === currentUser?.id ? "wa-chat__message--own" : ""} ${message.senderId === "system" ? "wa-chat__message--system" : ""}`}
             key={message.createdAt}
             onMouseEnter={() => setHoveredMessage(message)}
             onMouseLeave={() => setHoveredMessage(null)}
           >
-            <div className="wa-chat__bubble">
-              {message.img && (
-                <img
-                  className="wa-chat__bubble-img"
-                  src={message.img}
-                  alt="Image"
-                  onError={(e) => (e.target.src = "attach.png")}
-                />
-              )}
-              {message.audio && (
-                <audio controls className="wa-chat__bubble-audio">
-                  <source src={message.audio} type="audio/mp3" />
-                  Your browser does not support the audio element.
-                </audio>
-              )}
-              {message.text && (
-                <p className="wa-chat__text">{message.text}</p>
-              )}
-              <span className="wa-chat__time">
-                {format(
-                  message.createdAt?.toDate
-                    ? message.createdAt.toDate()
-                    : new Date(message.createdAt)
+            {message.senderId === "system" ? (
+              <div className="wa-chat__system-message">
+                <span>{message.text}</span>
+              </div>
+            ) : (
+              <div className="wa-chat__bubble">
+                {isGroup && message.senderId !== currentUser?.id && (
+                  <span
+                    className="wa-chat__sender-name"
+                    style={{ color: getSenderColor(message.senderId) }}
+                  >
+                    {getSenderName(message.senderId)}
+                  </span>
                 )}
-              </span>
-            </div>
+                {message.img && (
+                  <img
+                    className="wa-chat__bubble-img"
+                    src={message.img}
+                    alt="Image"
+                    onError={(e) => (e.target.src = "attach.png")}
+                  />
+                )}
+                {message.audio && (
+                  <audio controls className="wa-chat__bubble-audio">
+                    <source src={message.audio} type="audio/mp3" />
+                    Your browser does not support the audio element.
+                  </audio>
+                )}
+                {message.text && (
+                  <p className="wa-chat__text">{message.text}</p>
+                )}
+                <span className="wa-chat__time">
+                  {format(
+                    message.createdAt?.toDate
+                      ? message.createdAt.toDate()
+                      : new Date(message.createdAt)
+                  )}
+                  {message.senderId === currentUser?.id && (
+                    <span className={`wa-chat__ticks ${message.seen ? "wa-chat__ticks--read" : ""}`}>
+                      {message.seen ? "✓✓" : (activeUser?.isOnline ? "✓✓" : "✓")}
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
 
             {/* Delete dropdown on hover for own messages */}
-            {hoveredMessage === message && message.senderId === currentUser?.id && (
+            {hoveredMessage === message && message.senderId === currentUser?.id && message.senderId !== "system" && (
               <div className="wa-chat__dropdown">
                 <button className="wa-chat__dropdown-btn" onClick={() => openModal(message)}>
                   🗑 Delete

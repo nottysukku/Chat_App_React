@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 import { localDb } from "../../lib/localDb";
 
 const Detail = () => {
-  const { chat,receiverId, chatId, user, isCurrentUserBlocked, isReceiverBlocked, changeBlock, resetChat } = useChatStore();
+  const { chat, receiverId, chatId, user, isGroup, groupInfo, isCurrentUserBlocked, isReceiverBlocked, changeBlock, resetChat } = useChatStore();
   const { currentUser, isLocalMode } = useUserStore();
  
   const [showPhotos, setShowPhotos] = useState(true);
@@ -18,11 +18,17 @@ const Detail = () => {
   const [error, setError] = useState(null);
   const [showChatDropdown, setShowChatDropdown] = useState(false);
   const [showPrivacyDropdown, setShowPrivacyDropdown] = useState(false);
+  const [showGroupMembersDropdown, setShowGroupMembersDropdown] = useState(true);
   
+  // Group members states
+  const [membersList, setMembersList] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
   // Modal state
   const [showModal, setShowModal] = useState(false);  // For delete chat
   const [showLogoutModal, setShowLogoutModal] = useState(false);  // For logout
   const [showBlockModal, setShowBlockModal] = useState(false);  // For block user
+  const [showExitGroupModal, setShowExitGroupModal] = useState(false); // For exit group
 
   useEffect(() => {
     const fetchPhotos = async () => {
@@ -77,6 +83,149 @@ const Detail = () => {
 
     fetchPhotos();
   }, [chatId, isLocalMode]);
+
+  useEffect(() => {
+    if (!isGroup || !groupInfo) {
+      setMembersList([]);
+      return;
+    }
+
+    const fetchMembers = async () => {
+      setLoadingMembers(true);
+      try {
+        if (isLocalMode) {
+          const allUsers = JSON.parse(localStorage.getItem("sqlite_users") || "[]");
+          const members = allUsers.filter(u => groupInfo.members.includes(u.id));
+          setMembersList(members);
+        } else {
+          const members = [];
+          for (const memberId of groupInfo.members) {
+            const userDocSnap = await getDoc(doc(db, "users", memberId));
+            if (userDocSnap.exists()) {
+              members.push(userDocSnap.data());
+            }
+          }
+          setMembersList(members);
+        }
+      } catch (err) {
+        console.error("Error fetching group members in Detail panel:", err);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+
+    fetchMembers();
+    if (isLocalMode) {
+      window.addEventListener("local-db-update", fetchMembers);
+      return () => window.removeEventListener("local-db-update", fetchMembers);
+    }
+  }, [chatId, isGroup, groupInfo, isLocalMode]);
+
+  const handleExitGroup = async () => {
+    if (!chatId || !groupInfo) return;
+
+    try {
+      if (isLocalMode) {
+        // SQLite local exit group
+        // 1. Remove currentUser.id from group members list in chats table
+        const chats = localDb._getTable("chats");
+        const chatIdx = chats.findIndex(c => c.id === chatId);
+        if (chatIdx > -1) {
+          chats[chatIdx].members = chats[chatIdx].members.filter(id => id !== currentUser.id);
+          // Push a system message that the user left
+          chats[chatIdx].messages.push({
+            senderId: "system",
+            text: `${currentUser.username} left the group`,
+            createdAt: new Date().toISOString()
+          });
+          localDb._setTable("chats", chats);
+        }
+
+        // 2. Remove the group chat from the currentUser's userchats list
+        const currentUserChats = localDb.getUserChats(currentUser.id).filter(c => c.chatId !== chatId);
+        localDb.updateUserChats(currentUser.id, currentUserChats);
+
+        // 3. For all remaining members, update the userchats summaries
+        const remainingMembers = groupInfo.members.filter(id => id !== currentUser.id);
+        const userchats = JSON.parse(localStorage.getItem("sqlite_userchats") || "{}");
+        remainingMembers.forEach(memberId => {
+          if (userchats[memberId]) {
+            const idx = userchats[memberId].chats.findIndex(c => c.chatId === chatId);
+            if (idx > -1) {
+              userchats[memberId].chats[idx].lastMessage = `${currentUser.username} left the group`;
+              userchats[memberId].chats[idx].updatedAt = Date.now();
+            }
+          }
+        });
+        localStorage.setItem("sqlite_userchats", JSON.stringify(userchats));
+        window.dispatchEvent(new CustomEvent("local-db-update"));
+
+        toast.success(`You have left the group "${groupInfo.groupName}"`);
+        resetChat();
+        return;
+      }
+
+      // Cloud Firebase exit group
+      const chatDocRef = doc(db, "chats", chatId);
+      const chatDocSnap = await getDoc(chatDocRef);
+      if (chatDocSnap.exists()) {
+        const chatData = chatDocSnap.data();
+        const updatedMembers = (chatData.members || []).filter(id => id !== currentUser.id);
+        const updatedMessages = [
+          ...(chatData.messages || []),
+          {
+            senderId: "system",
+            text: `${currentUser.username} left the group`,
+            createdAt: Date.now()
+          }
+        ];
+        
+        await updateDoc(chatDocRef, {
+          members: updatedMembers,
+          messages: updatedMessages
+        });
+
+        // Remove from current user's userchats
+        const userChatsRef = doc(db, "userchats", currentUser.id);
+        const userChatsSnap = await getDoc(userChatsRef);
+        if (userChatsSnap.exists()) {
+          const userChatsData = userChatsSnap.data();
+          const filteredChats = (userChatsData.chats || []).filter(c => c.chatId !== chatId);
+          await updateDoc(userChatsRef, { chats: filteredChats });
+        }
+
+        // Update lastMessage for other members
+        for (const memberId of updatedMembers) {
+          const mChatsRef = doc(db, "userchats", memberId);
+          const mChatsSnap = await getDoc(mChatsRef);
+          if (mChatsSnap.exists()) {
+            const mChatsData = mChatsSnap.data();
+            const idx = (mChatsData.chats || []).findIndex(c => c.chatId === chatId);
+            if (idx > -1) {
+              mChatsData.chats[idx].lastMessage = `${currentUser.username} left the group`;
+              mChatsData.chats[idx].updatedAt = Date.now();
+              await updateDoc(mChatsRef, { chats: mChatsData.chats });
+            }
+          }
+        }
+      }
+
+      toast.success(`You have left the group "${groupInfo.groupName}"`);
+      resetChat();
+    } catch (err) {
+      console.error("Error exiting group:", err);
+      toast.error("Failed to exit the group.");
+    }
+  };
+
+  const confirmExitGroup = () => {
+    handleExitGroup();
+    setShowExitGroupModal(false);
+  };
+
+  const cancelExitGroup = () => {
+    setShowExitGroupModal(false);
+  };
 
   const handleDownload = (photo) => {
     saveAs(photo.url, photo.name);
@@ -230,12 +379,50 @@ const Detail = () => {
   return (
     <div className="detail">
       <div className="user">
-        <img src={user?.avatar || "./avatar2.png"} alt="User Avatar" />
-        <h2>{user?.username || "Unknown User"}</h2>
-        <p>{user?.status || "Hey! I'm using Chatapp"}</p>
+        <img
+          src={isGroup ? (groupInfo?.groupAvatar || "./avatar2.png") : (user?.avatar || "./avatar2.png")}
+          alt="Avatar"
+        />
+        <h2>{isGroup ? (groupInfo?.groupName || "Group Chat") : (user?.username || "Unknown User")}</h2>
+        <p>{isGroup ? `${groupInfo?.members?.length || 0} participants` : (user?.status || "Hey! I'm using Chatapp")}</p>
       </div>
 
       <div className="info">
+        {isGroup && (
+          <div className="option">
+            <div
+              className="title"
+              onClick={() => setShowGroupMembersDropdown((prev) => !prev)}
+            >
+              <span>Group Members</span>
+              <img
+                src={showGroupMembersDropdown ? "./arrowDown.png" : "./arrowUp.png"}
+                alt="Arrow"
+              />
+            </div>
+            {showGroupMembersDropdown && (
+              <div className="detail__members-list">
+                {loadingMembers ? (
+                  <p className="detail__loading-text">Loading members...</p>
+                ) : (
+                  membersList.map((m) => (
+                    <div key={m.id} className="detail__member-item">
+                      <img src={m.avatar || "./avatar2.png"} alt={m.username} className="detail__member-avatar" />
+                      <div className="detail__member-info">
+                        <span className="detail__member-name">
+                          {m.id === currentUser.id ? `${m.username} (You)` : m.username}
+                        </span>
+                        <span className="detail__member-status">{m.status || "Hey! I'm using Chatapp"}</span>
+                      </div>
+                      {m.isOnline && <span className="detail__member-online-dot"></span>}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="option">
           <div
             className="title"
@@ -255,19 +442,30 @@ const Detail = () => {
               >
                 Logout
               </button>
-              <button 
-                onClick={() => setShowModal(true)} 
-                style={{ margin: "0px 20px" }} 
-                className="logout-button"
-              >
-                Delete Chat
-              </button>
-              <button 
-                onClick={() => setShowBlockModal(true)}  // Show block confirmation modal
-                className="logout-button"
-              >
-                {isReceiverBlocked ? "Unblock User" : "Block User"}
-              </button>
+              {isGroup ? (
+                <button
+                  onClick={() => setShowExitGroupModal(true)}
+                  className="logout-button"
+                >
+                  Exit Group
+                </button>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => setShowModal(true)} 
+                    style={{ margin: "0px 20px" }} 
+                    className="logout-button"
+                  >
+                    Delete Chat
+                  </button>
+                  <button 
+                    onClick={() => setShowBlockModal(true)}  // Show block confirmation modal
+                    className="logout-button"
+                  >
+                    {isReceiverBlocked ? "Unblock User" : "Block User"}
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -376,6 +574,19 @@ const Detail = () => {
             <div className="modal-buttons">
               <button onClick={handleBlock} className="confirm-btn">Yes</button>
               <button onClick={cancelBlock} className="cancel-btn">No</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal for Exiting Group */}
+      {showExitGroupModal && (
+        <div className="modal">
+          <div className="modal-content">
+            <p>Are you sure you want to exit this group?</p>
+            <div className="modal-buttons">
+              <button onClick={confirmExitGroup} className="confirm-btn">Yes</button>
+              <button onClick={cancelExitGroup} className="cancel-btn">No</button>
             </div>
           </div>
         </div>
