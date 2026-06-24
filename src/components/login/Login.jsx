@@ -144,7 +144,9 @@ const Login = () => {
     // Standard Firebase Cloud sign in
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      // Ensure we are NOT in local mode after a successful Firebase sign-in
       localStorage.setItem("is_local_mode", "false");
+      localStorage.removeItem("local_current_user");
       toast.success("Signed in successfully!");
     } catch (err) {
       console.error(err);
@@ -157,6 +159,16 @@ const Login = () => {
   const handleToggleMode = () => {
     setIsRegisterMode((prev) => !prev);
     setShowPassword(false);
+  };
+
+  // When user switches from offline → cloud mode, clear the stale local flag
+  const handleOfflineModeToggle = (checked) => {
+    setIsOfflineMode(checked);
+    if (!checked) {
+      // Switching to Cloud mode — clear any stale local session
+      localStorage.removeItem("is_local_mode");
+      localStorage.removeItem("local_current_user");
+    }
   };
 
   return (
@@ -208,7 +220,7 @@ const Login = () => {
             <input
               type="checkbox"
               checked={isOfflineMode}
-              onChange={(e) => setIsOfflineMode(e.target.checked)}
+              onChange={(e) => handleOfflineModeToggle(e.target.checked)}
             />
             <span className="login__slider"></span>
           </label>

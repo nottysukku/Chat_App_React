@@ -1,4 +1,4 @@
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { create } from "zustand";
 import { db, auth } from "./firebase";
 import { localDb } from "./localDb";
@@ -26,9 +26,19 @@ export const useUserStore = create((set, get) => ({
       if (docSnap.exists()) {
         const userData = docSnap.data();
         if (!userData.id) userData.id = uid;
+        // Always clear local mode when Firebase user is found
         localStorage.setItem("is_local_mode", "false");
+        localStorage.removeItem("local_current_user");
         set({ currentUser: userData, isLocalMode: false, isLoading: false });
       } else {
+        // Firebase Auth user exists but no Firestore doc — this can happen
+        // if the account was created in another session or the doc write failed.
+        // Sign them out cleanly so they can re-register properly.
+        console.warn("Firebase Auth user found but no Firestore profile document. Signing out.");
+        toast.error("Account profile not found. Please sign up again.");
+        await auth.signOut();
+        localStorage.setItem("is_local_mode", "false");
+        localStorage.removeItem("local_current_user");
         set({ currentUser: null, isLocalMode: false, isLoading: false });
       }
     } catch (err) {

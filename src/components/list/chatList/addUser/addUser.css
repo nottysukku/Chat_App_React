@@ -169,3 +169,52 @@
   color: var(--text-secondary);
   font-size: 14px;
 }
+
+/* Refresh button in header */
+.wa-newchat__refresh-btn {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: var(--radius-full);
+  transition: background-color var(--transition-fast), transform 200ms;
+  color: var(--text-secondary);
+}
+
+.wa-newchat__refresh-btn:hover {
+  background-color: var(--bg-hover);
+  transform: rotate(180deg);
+}
+
+/* Mode badge below header */
+.wa-newchat__mode-badge {
+  padding: 6px 16px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.3px;
+}
+
+/* Avatar wrapper for online dot */
+.wa-newchat__avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.wa-newchat__online-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 11px;
+  height: 11px;
+  background: #25d366;
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
+}
