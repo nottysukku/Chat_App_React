@@ -572,7 +572,11 @@ const Chat = () => {
                 <p className="wa-chat__text">{message.text}</p>
               )}
               <span className="wa-chat__time">
-                {format(message.createdAt.toDate())}
+                {format(
+                  message.createdAt?.toDate
+                    ? message.createdAt.toDate()
+                    : new Date(message.createdAt)
+                )}
               </span>
             </div>
 

@@ -6,6 +6,35 @@ class LocalDb {
   }
 
   init() {
+    // Migrate existing Unsplash images if stored in LocalStorage to prevent ERR_SSL_PROTOCOL_ERROR
+    try {
+      const usersStr = localStorage.getItem("sqlite_users");
+      if (usersStr && usersStr.includes("unsplash.com")) {
+        const users = JSON.parse(usersStr);
+        users.forEach(u => {
+          if (u.avatar && u.avatar.includes("unsplash.com")) {
+            u.avatar = "./avatar2.png";
+          }
+        });
+        localStorage.setItem("sqlite_users", JSON.stringify(users));
+      }
+      const storiesStr = localStorage.getItem("sqlite_stories");
+      if (storiesStr && storiesStr.includes("unsplash.com")) {
+        const stories = JSON.parse(storiesStr);
+        stories.forEach(s => {
+          if (s.userAvatar && s.userAvatar.includes("unsplash.com")) {
+            s.userAvatar = "./avatar2.png";
+          }
+          if (s.content && s.content.includes("unsplash.com")) {
+            s.content = "./bg1.jpg";
+          }
+        });
+        localStorage.setItem("sqlite_stories", JSON.stringify(stories));
+      }
+    } catch (e) {
+      console.error("Migration error:", e);
+    }
+
     // Check and initialize "tables" in LocalStorage
     if (!localStorage.getItem("sqlite_users")) {
       const mockUsers = [
@@ -13,7 +42,7 @@ class LocalDb {
           id: "alice_id",
           username: "Alice Smith",
           email: "alice@example.com",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+          avatar: "./avatar2.png",
           status: "🌸 Coding my life away...",
           blocked: [],
         },
@@ -21,7 +50,7 @@ class LocalDb {
           id: "bob_id",
           username: "Bob Jones",
           email: "bob@example.com",
-          avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+          avatar: "./avatar2.png",
           status: "🏄‍♂️ Catching some waves",
           blocked: [],
         },
@@ -29,7 +58,7 @@ class LocalDb {
           id: "gemini_ai_id",
           username: "Gemini AI",
           email: "gemini@google.com",
-          avatar: "https://images.unsplash.com/photo-1675557009875-436f09780264?w=150",
+          avatar: "./avatar2.png",
           status: "🤖 Always online, ready to help!",
           blocked: [],
         }
@@ -88,7 +117,7 @@ class LocalDb {
           id: "story_1",
           userId: "alice_id",
           username: "Alice Smith",
-          userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+          userAvatar: "./avatar2.png",
           content: "Enjoying a quiet cup of coffee this morning! ☕",
           type: "text",
           createdAt: Date.now(),
@@ -98,8 +127,8 @@ class LocalDb {
           id: "story_2",
           userId: "bob_id",
           username: "Bob Jones",
-          userAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-          content: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=600",
+          userAvatar: "./avatar2.png",
+          content: "./bg1.jpg",
           type: "image",
           createdAt: Date.now() - 2000000,
           expiresAt: Date.now() + 86400000 - 2000000,

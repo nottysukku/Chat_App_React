@@ -6,6 +6,8 @@
   flex-direction: column;
   background-color: var(--bg-primary);
   border-right: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {

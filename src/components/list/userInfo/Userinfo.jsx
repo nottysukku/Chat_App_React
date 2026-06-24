@@ -4,6 +4,7 @@ import { auth } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
 import Chatbot from "../../Chatbot/Chatbot";
 import Stories from "../../stories/Stories";
+import ProfileDrawer from "./ProfileDrawer";
 import "./userInfo.css";
 
 const UserInfo = () => {
@@ -12,6 +13,7 @@ const UserInfo = () => {
   const [isDark, setIsDark] = useState(!document.documentElement.classList.contains("light"));
   const [showChatbot, setShowChatbot] = useState(false);
   const [showStories, setShowStories] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   const toggleDarkMode = () => {
     const html = document.documentElement;
@@ -43,6 +45,9 @@ const UserInfo = () => {
             src={currentUser.avatar || "./avatar.png"}
             alt="User Avatar"
             className="wa-header__avatar"
+            onClick={() => setShowProfile(true)}
+            style={{ cursor: "pointer" }}
+            title="View Profile"
           />
           <span className="wa-header__title">ChatApp</span>
         </div>
@@ -79,6 +84,7 @@ const UserInfo = () => {
       </div>
       <Chatbot isOpen={showChatbot} onClose={() => setShowChatbot(false)} />
       <Stories isOpen={showStories} onClose={() => setShowStories(false)} />
+      <ProfileDrawer isOpen={showProfile} onClose={() => setShowProfile(false)} />
     </>
   );
 };

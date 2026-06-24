@@ -1,4 +1,4 @@
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { create } from "zustand";
 import { db } from "./firebase";
 import { localDb } from "./localDb";
@@ -22,7 +22,10 @@ export const useUserStore = create((set) => ({
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        set({ currentUser: docSnap.data(), isLocalMode: false, isLoading: false });
+        // Ensure id is present in the currentUser object (firebase uses uid, but id is expected by many components)
+        const userData = docSnap.data();
+        if (!userData.id) userData.id = uid;
+        set({ currentUser: userData, isLocalMode: false, isLoading: false });
       } else {
         set({ currentUser: null, isLocalMode: false, isLoading: false });
       }
@@ -64,5 +67,33 @@ export const useUserStore = create((set) => ({
     localStorage.removeItem("is_local_mode");
     localStorage.removeItem("local_current_user");
     set({ currentUser: null, isLocalMode: false, isLoading: false });
+  },
+  updateUserInfo: async (updatedData) => {
+    set((state) => {
+      const newUser = { ...state.currentUser, ...updatedData };
+      if (state.isLocalMode) {
+        localStorage.setItem("local_current_user", JSON.stringify(newUser));
+        // Update user in localDb
+        const users = JSON.parse(localStorage.getItem("sqlite_users") || "[]");
+        const idx = users.findIndex(u => u.id === newUser.id);
+        if (idx > -1) {
+          users[idx] = { ...users[idx], ...updatedData };
+          localStorage.setItem("sqlite_users", JSON.stringify(users));
+          window.dispatchEvent(new CustomEvent("local-db-update"));
+        }
+      }
+      return { currentUser: newUser };
+    });
+
+    // In Firebase mode, update Firestore document
+    const { isLocalMode, currentUser } = useUserStore.getState();
+    if (!isLocalMode && currentUser?.id) {
+      try {
+        const userRef = doc(db, "users", currentUser.id);
+        await updateDoc(userRef, updatedData);
+      } catch (err) {
+        console.error("Failed to update Firestore user info:", err);
+      }
+    }
   }
 }));
