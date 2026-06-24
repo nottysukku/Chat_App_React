@@ -20,6 +20,7 @@ import { format } from "timeago.js";
 import { toast } from "react-toastify";
 import LoadingPopup from "./LoadingPopup";
 import { encrypt, decrypt, getChatKey } from "../../lib/encryption";
+import BreakersGame from "./BreakersGame";
 
 const Chat = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -45,6 +46,15 @@ const Chat = () => {
   const [activeUser, setActiveUser] = useState(user);
   const [groupMembers, setGroupMembers] = useState([]);
   const endRef = useRef(null);
+
+  // AI Boredom state
+  const [isRoasting, setIsRoasting] = useState(false);
+  const [roastBotName, setRoastBotName] = useState("");
+  const [showGame, setShowGame] = useState(false);
+  const [showVictoryModal, setShowVictoryModal] = useState(false);
+  const [evaluatingVictory, setEvaluatingVictory] = useState(false);
+  const [victoryFeedback, setVictoryFeedback] = useState("");
+  const [victoryEvaluationResult, setVictoryEvaluationResult] = useState(null);
 
   const updateUserChatsSummary = async (lastMsgText) => {
     const userIDs = isGroup ? (groupInfo?.members || []) : [currentUser.id, user.id];
@@ -95,6 +105,17 @@ const Chat = () => {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat?.messages]);
+
+  useEffect(() => {
+    if (chatId && isGroup && groupInfo?.isAIBoredom && chat?.messages) {
+      const systemMsgOnly = chat.messages.length === 1 && chat.messages[0].senderId === "system";
+      if (systemMsgOnly && !isRoasting) {
+        setTimeout(() => {
+          triggerInitialBotQuestion();
+        }, 1500);
+      }
+    }
+  }, [chatId, isGroup, groupInfo, chat?.messages]);
 
   // 1. Sync User / Group Status and Details in real-time
   useEffect(() => {
@@ -420,6 +441,10 @@ const Chat = () => {
             setTimeout(() => {
               triggerLocalGeminiResponse(chatId, [...chats[chatIndex].messages]);
             }, 1000);
+          } else if (isGroup && groupInfo?.isAIBoredom) {
+            setTimeout(() => {
+              triggerAIBoredomRoastSequence([...chats[chatIndex].messages]);
+            }, 1000);
           }
         }
         setText("");
@@ -470,6 +495,14 @@ const Chat = () => {
       // Show success toast if image was uploaded
       if (img.file) {
         toast.success("Message with image sent successfully!");
+      }
+
+      if (isGroup && groupInfo?.isAIBoredom) {
+        const docSnap = await getDoc(doc(db, "chats", chatId));
+        const currentMessages = docSnap.data()?.messages || [];
+        setTimeout(() => {
+          triggerAIBoredomRoastSequence(currentMessages);
+        }, 1000);
       }
 
     } catch (err) {
@@ -682,7 +715,7 @@ const Chat = () => {
       }));
       
       const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contents: formattedHistory })
@@ -720,6 +753,258 @@ const Chat = () => {
     }
   };
 
+  // --- AI Boredom Zone Game helpers ---
+
+  const triggerInitialBotQuestion = async () => {
+    if (!chatId || !groupInfo || isRoasting) return;
+
+    const otherMembers = groupInfo.members.filter(mId => mId !== currentUser.id);
+    if (otherMembers.length === 0) return;
+    const botId = otherMembers[Math.floor(Math.random() * otherMembers.length)];
+    const botUser = groupMembers.find(m => m.id === botId) || { username: "TrollBot", status: "Chilling" };
+
+    setIsRoasting(true);
+    setRoastBotName(botUser.username);
+
+    try {
+      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      const prompt = `You are a troll bot in a group chat named "AI Boredom Zone". You are speaking as user ${botUser.username} (status: "${botUser.status || ""}"). Ask the user ${currentUser.username} an open-ended, slightly cheeky, embarrassing or funny question on a random topic (e.g. why their username is weird, their coding skills, their fashion sense, what they do when they are bored, etc.). Keep it funny and witty. Keep it under 2 sentences. Target the user by their name @${currentUser.username}. Do not prefix your message with anything. Speak directly.`;
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      const data = await response.json();
+      const questionText = data?.candidates?.[0]?.content?.parts?.[0]?.text || `Hey @${currentUser.username}, tell us something boring.`;
+
+      const encryptedText = encrypt(questionText, getChatKey(chatId));
+
+      if (isLocalMode) {
+        const chats = localDb._getTable("chats");
+        const chatIndex = chats.findIndex((c) => c.id === chatId);
+        if (chatIndex > -1) {
+          chats[chatIndex].messages.push({
+            senderId: botId,
+            text: encryptedText,
+            createdAt: new Date().toISOString(),
+            seen: true
+          });
+          localDb._setTable("chats", chats);
+          updateUserChatsSummary(questionText);
+        }
+      } else {
+        await updateDoc(doc(db, "chats", chatId), {
+          messages: arrayUnion({
+            senderId: botId,
+            text: encryptedText,
+            createdAt: new Date(),
+            seen: true
+          })
+        });
+        await updateUserChatsSummary(questionText);
+      }
+    } catch (err) {
+      console.error("Failed to trigger initial question:", err);
+    } finally {
+      setIsRoasting(false);
+      setRoastBotName("");
+    }
+  };
+
+  const triggerAIBoredomRoastSequence = async (currentMessages) => {
+    if (!chatId || !groupInfo || isRoasting) return;
+
+    const otherMembers = groupInfo.members.filter(mId => mId !== currentUser.id);
+    if (otherMembers.length === 0) return;
+
+    // Pick 2 random bots to roast sequentially
+    const bot1Id = otherMembers[Math.floor(Math.random() * otherMembers.length)];
+    let bot2Id = otherMembers[Math.floor(Math.random() * otherMembers.length)];
+    if (otherMembers.length > 1 && bot2Id === bot1Id) {
+      bot2Id = otherMembers.find(mId => mId !== bot1Id);
+    }
+
+    const bot1 = groupMembers.find(m => m.id === bot1Id) || { username: "Roaster1", status: "Roasting" };
+    const bot2 = groupMembers.find(m => m.id === bot2Id) || { username: "Roaster2", status: "Roasting" };
+
+    const runBotRoast = async (botId, botUser, messagesSnapshot) => {
+      setIsRoasting(true);
+      setRoastBotName(botUser.username);
+
+      // Simulate typing delay
+      await new Promise(resolve => setTimeout(resolve, 2200));
+
+      try {
+        const historyText = messagesSnapshot.slice(-10).map(msg => {
+          const senderName = msg.senderId === currentUser.id ? currentUser.username : (groupMembers.find(m => m.id === msg.senderId)?.username || "Bot");
+          const decryptedText = decrypt(msg.text, getChatKey(chatId)) || "";
+          return `${senderName}: ${decryptedText}`;
+        }).join("\n");
+
+        const prompt = `You are a troll bot in a group chat named "AI Boredom Zone". The chat members are roasting each other. You are speaking as ${botUser.username} (status: "${botUser.status || ""}"). Roast and mock the user ${currentUser.username}'s latest reply based on the chat history. Keep it extremely sarcastic, funny, and witty. You can agree with other bots or add your own roast. Keep your reply under 2 sentences. Do not mention that you are an AI. Speak naturally.
+        Chat History:
+        ${historyText}`;
+
+        const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        });
+
+        const data = await response.json();
+        const roastText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Wow, that was a pretty mid response.";
+
+        const encryptedText = encrypt(roastText, getChatKey(chatId));
+
+        if (isLocalMode) {
+          const chats = localDb._getTable("chats");
+          const chatIndex = chats.findIndex((c) => c.id === chatId);
+          if (chatIndex > -1) {
+            chats[chatIndex].messages.push({
+              senderId: botId,
+              text: encryptedText,
+              createdAt: new Date().toISOString(),
+              seen: true
+            });
+            localDb._setTable("chats", chats);
+            updateUserChatsSummary(roastText);
+          }
+        } else {
+          await updateDoc(doc(db, "chats", chatId), {
+            messages: arrayUnion({
+              senderId: botId,
+              text: encryptedText,
+              createdAt: new Date(),
+              seen: true
+            })
+          });
+          await updateUserChatsSummary(roastText);
+        }
+      } catch (err) {
+        console.error("Roast error for " + botUser.username, err);
+      }
+    };
+
+    // Bot 1 roasts
+    await runBotRoast(bot1Id, bot1, currentMessages);
+
+    // Wait and then Bot 2 roasts with refreshed snapshot
+    let updatedMessagesList = [];
+    if (isLocalMode) {
+      const chats = localDb._getTable("chats");
+      const currentChat = chats.find(c => c.id === chatId);
+      updatedMessagesList = currentChat ? currentChat.messages : [];
+    } else {
+      const snap = await getDoc(doc(db, "chats", chatId));
+      updatedMessagesList = snap.data()?.messages || [];
+    }
+
+    await runBotRoast(bot2Id, bot2, updatedMessagesList);
+
+    setIsRoasting(false);
+    setRoastBotName("");
+  };
+
+  const handleEvaluateVictory = async () => {
+    if (!chat || !chat.messages) return;
+    setEvaluatingVictory(true);
+    setShowVictoryModal(true);
+    setVictoryFeedback("");
+    setVictoryEvaluationResult(null);
+
+    try {
+      const historyText = chat.messages.map(msg => {
+        const senderName = msg.senderId === "system" ? "System" : 
+          (msg.senderId === currentUser.id ? currentUser.username : 
+          (groupMembers.find(m => m.id === msg.senderId)?.username || "Bot"));
+        const decryptedText = decrypt(msg.text, getChatKey(chatId)) || "";
+        return `${senderName}: ${decryptedText}`;
+      }).join("\n");
+
+      const prompt = `Analyze this group chat conversation between a user (${currentUser.username}) and several roasting AI bots in a chat called "AI Boredom Zone". 
+      Determine if the user won the roast battle (e.g. by making funny/witty comebacks, roasting the bots back successfully, or standing their ground with humor) or if they lost (got roasted into oblivion, got defensive, got angry, or made boring/generic replies). 
+      You MUST return a JSON object with exactly two keys: "won" (boolean) and "feedback" (string, explaining in a funny, sassy, sarcastic tone in 2 sentences why they won or lost). Do not return markdown, do not wrap in backticks, just raw JSON.
+      
+      Conversation History:
+      ${historyText}`;
+
+      const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      const data = await response.json();
+      let rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{"won": false, "feedback": "Connection lost. Try again."}';
+      
+      rawText = rawText.trim();
+      if (rawText.startsWith("```json")) {
+        rawText = rawText.substring(7, rawText.length - 3).trim();
+      } else if (rawText.startsWith("```")) {
+        rawText = rawText.substring(3, rawText.length - 3).trim();
+      }
+
+      const evaluationObj = JSON.parse(rawText);
+      setVictoryEvaluationResult(evaluationObj.won ? "won" : "lost");
+      setVictoryFeedback(evaluationObj.feedback || "");
+    } catch (err) {
+      console.error("Victory evaluation error:", err);
+      setVictoryEvaluationResult("lost");
+      setVictoryFeedback("The referee bots decided you lost because of API errors. Sucks to be you!");
+    } finally {
+      setEvaluatingVictory(false);
+    }
+  };
+
+  const handleEscapeSuccess = async () => {
+    try {
+      if (isLocalMode) {
+        let chats = localDb._getTable("chats");
+        chats = chats.filter(c => c.id !== chatId);
+        localDb._setTable("chats", chats);
+
+        const userchats = JSON.parse(localStorage.getItem("sqlite_userchats") || "{}");
+        if (userchats[currentUser.id]) {
+          userchats[currentUser.id].chats = userchats[currentUser.id].chats.filter(c => c.chatId !== chatId);
+          localStorage.setItem("sqlite_userchats", JSON.stringify(userchats));
+        }
+        window.dispatchEvent(new CustomEvent("local-db-update"));
+      } else {
+        const userChatsRef = doc(db, "userchats", currentUser.id);
+        const snap = await getDoc(userChatsRef);
+        if (snap.exists()) {
+          const updatedChats = snap.data().chats.filter(c => c.chatId !== chatId);
+          await updateDoc(userChatsRef, { chats: updatedChats });
+        }
+      }
+      toast.success("Successfully exited the Boredom Zone and kicked everyone out!");
+    } catch (err) {
+      console.error("Error exiting group:", err);
+    } finally {
+      setShowGame(false);
+      setShowVictoryModal(false);
+      resetChat();
+    }
+  };
+
+  const handleBack = () => {
+    if (isGroup && groupInfo?.isAIBoredom) {
+      toast.warn("😈 You cannot leave the Boredom Zone so easily! Click 'End Chat Game' to escape.");
+      return;
+    }
+    resetChat();
+  };
+
   const getHeaderName = () => {
     return isGroup ? (groupInfo?.groupName || "Group Chat") : (activeUser?.username || user?.username);
   };
@@ -754,11 +1039,14 @@ const Chat = () => {
     return member ? member.username : "Group Member";
   };
 
+  const userMessagesCount = chat?.messages?.filter(m => m.senderId === currentUser?.id).length || 0;
+  const showEndGameButton = isGroup && groupInfo?.isAIBoredom && userMessagesCount >= 3;
+
   return (
     <div className="wa-chat">
       {/* ===== Header ===== */}
       <div className="wa-chat__header">
-        <button className="wa-chat__back-btn" onClick={resetChat} title="Back to chats">
+        <button className="wa-chat__back-btn" onClick={handleBack} title="Back to chats">
           ←
         </button>
         <div className="wa-chat__header-user">
@@ -861,6 +1149,24 @@ const Chat = () => {
               <img className="wa-chat__bubble-img" src={img.url} alt="Preview" />
               <span className="wa-chat__preview-label">Preview</span>
             </div>
+          </div>
+        )}
+
+        {isRoasting && (
+          <div className="wa-chat__message wa-chat__message--bot wa-chat__roast-typing">
+            <span className="wa-chat__roast-typing-name">{roastBotName} is typing...</span>
+            <div className="wa-chat__bubble wa-chat__typing">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        )}
+
+        {showEndGameButton && !isRoasting && (
+          <div className="wa-chat__boredom-escape-banner">
+            <span>💥 Ready to escape the AI Boredom Zone?</span>
+            <button className="wa-chat__boredom-escape-btn" onClick={handleEvaluateVictory}>
+              End Chat Game
+            </button>
           </div>
         )}
 
@@ -1043,6 +1349,69 @@ const Chat = () => {
           onShareLink={handleShareLink}
           onClose={handleCallClose}
         />
+      )}
+
+      {/* ===== AI Boredom Escape / Victory Modal ===== */}
+      {showVictoryModal && (
+        <div className="wa-chat__modal-overlay">
+          <div className="wa-chat__modal wa-chat__modal--boredom">
+            <h3 className="wa-chat__modal-title">Escape AI Boredom Zone</h3>
+            
+            {evaluatingVictory ? (
+              <div className="wa-chat__modal-evaluating">
+                <div className="wa-chat__spinner"></div>
+                <p>Analyzing conversation roast balance via Gemini AI...</p>
+              </div>
+            ) : victoryEvaluationResult === null ? (
+              <>
+                <p className="wa-chat__modal-text">
+                  Choose how you want to exit. You can claim victory (and let Gemini decide if you roasted them back successfully) or admit defeat immediately (which triggers the Breakers brick game).
+                </p>
+                <div className="wa-chat__modal-actions wa-chat__modal-actions--column">
+                  <button className="wa-chat__modal-btn wa-chat__modal-btn--victory" onClick={handleEvaluateVictory}>
+                    🏆 Claim Victory (AI Evaluation)
+                  </button>
+                  <button className="wa-chat__modal-btn wa-chat__modal-btn--defeat" onClick={() => { setShowVictoryModal(false); setShowGame(true); }}>
+                    🏳️ Admit Defeat (Play Breakers)
+                  </button>
+                  <button className="wa-chat__modal-btn wa-chat__modal-btn--cancel" onClick={() => setShowVictoryModal(false)}>
+                    Stay in Chat
+                  </button>
+                </div>
+              </>
+            ) : victoryEvaluationResult === "won" ? (
+              <>
+                <div className="wa-chat__modal-result-icon">🏆</div>
+                <h4 className="wa-chat__modal-subtitle" style={{ color: "#10b981" }}>Gemini Declared You Winner!</h4>
+                <p className="wa-chat__modal-feedback">"{victoryFeedback}"</p>
+                <div className="wa-chat__modal-actions">
+                  <button className="wa-chat__modal-btn wa-chat__modal-btn--exit-group" onClick={handleEscapeSuccess}>
+                    Kick Everyone Out & Exit
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="wa-chat__modal-result-icon">💀</div>
+                <h4 className="wa-chat__modal-subtitle" style={{ color: "#ef4444" }}>You got roasted into oblivion!</h4>
+                <p className="wa-chat__modal-feedback">"{victoryFeedback}"</p>
+                <p className="wa-chat__modal-text" style={{ fontSize: "12px", marginTop: "8px" }}>
+                  Gemini decided your roasts were too weak. To escape, you must now play the Breakers brick game!
+                </p>
+                <div className="wa-chat__modal-actions">
+                  <button className="wa-chat__modal-btn wa-chat__modal-btn--defeat" onClick={() => { setShowVictoryModal(false); setShowGame(true); }}>
+                    Play Breakers Game
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Breakers Game Modal ===== */}
+      {showGame && (
+        <BreakersGame onSuccess={handleEscapeSuccess} />
       )}
     </div>
   );

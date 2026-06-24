@@ -16,7 +16,7 @@ const ChatList = () => {
   const [input, setInput] = useState("");
 
   const { currentUser, isLocalMode } = useUserStore();
-  const { changeChat } = useChatStore();
+  const { changeChat, chatId: activeChatId, isGroup: activeIsGroup, groupInfo: activeGroupInfo } = useChatStore();
 
   useEffect(() => {
     if (isLocalMode) {
@@ -84,6 +84,11 @@ const ChatList = () => {
   }, [currentUser.id, isLocalMode]);
 
   const handleSelect = async (chat) => {
+    if (activeIsGroup && activeGroupInfo?.isAIBoredom && activeChatId !== chat.chatId) {
+      toast.warn("😈 You cannot flee the Boredom Zone! Escape the roast battle first.");
+      return;
+    }
+
     const userChats = chats.map((item) => {
       const { user, ...rest } = item;
       return rest;

@@ -518,3 +518,161 @@ html.light .wa-chat__icon-btn img {
   margin: 6px 0;
   text-align: center;
 }
+
+/* AI Boredom Game Styles */
+.wa-chat__roast-typing {
+  align-self: flex-start !important;
+  margin-left: 10px;
+}
+
+.wa-chat__roast-typing-name {
+  font-size: 11px;
+  color: #fbbf24; /* yellow */
+  font-weight: 600;
+  margin-bottom: 2px;
+  display: block;
+}
+
+.wa-chat__boredom-escape-banner {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(245, 158, 11, 0.25));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 14px 20px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 15px 10px;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15), 0 0 10px rgba(239, 68, 68, 0.1) inset;
+}
+
+.wa-chat__boredom-escape-banner span {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fca5a5;
+  text-shadow: 0 0 5px rgba(239,68,68,0.3);
+}
+
+.wa-chat__boredom-escape-btn {
+  background: linear-gradient(135deg, #ef4444, #fb923c);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+  transition: all 0.2s ease;
+}
+
+.wa-chat__boredom-escape-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(239, 68, 68, 0.5);
+  filter: brightness(1.1);
+}
+
+/* Escape Victory Modal */
+.wa-chat__modal--boredom {
+  max-width: 440px !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+.wa-chat__modal-evaluating {
+  padding: 30px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.wa-chat__spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(56, 189, 248, 0.1);
+  border-left-color: #38bdf8;
+  border-radius: 50%;
+  animation: wa-spin 1s linear infinite;
+}
+
+.wa-chat__modal-actions--column {
+  flex-direction: column !important;
+  gap: 10px !important;
+  width: 100%;
+}
+
+.wa-chat__modal-actions--column .wa-chat__modal-btn {
+  width: 100%;
+}
+
+.wa-chat__modal-btn--victory {
+  background: linear-gradient(135deg, #fbbf24, #d97706) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+}
+
+.wa-chat__modal-btn--victory:hover {
+  background: linear-gradient(135deg, #f59e0b, #b45309) !important;
+  transform: translateY(-1px);
+}
+
+.wa-chat__modal-btn--defeat {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+}
+
+.wa-chat__modal-btn--defeat:hover {
+  background: linear-gradient(135deg, #2563eb, #1e40af) !important;
+  transform: translateY(-1px);
+}
+
+.wa-chat__modal-btn--exit-group {
+  background: linear-gradient(135deg, #10b981, #047857) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 12px rgba(4, 120, 87, 0.3);
+}
+
+.wa-chat__modal-btn--exit-group:hover {
+  background: linear-gradient(135deg, #059669, #065f46) !important;
+  transform: translateY(-1px);
+}
+
+.wa-chat__modal-result-icon {
+  font-size: 54px;
+  margin-bottom: 8px;
+  animation: bounceResult 1s ease;
+}
+
+.wa-chat__modal-feedback {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px dashed rgba(255,255,255,0.1);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-style: italic;
+  color: #cbd5e1;
+  margin: 14px 0;
+  line-height: 1.5;
+}
+
+.wa-chat__modal-subtitle {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+@keyframes wa-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bounceResult {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.1); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}

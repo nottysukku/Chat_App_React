@@ -17,6 +17,7 @@ const CreateGroup = ({ isOpen, onClose }) => {
   const [groupName, setGroupName] = useState("");
   const [avatar, setAvatar] = useState({ file: null, url: "" });
   const [loading, setLoading] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -63,6 +64,144 @@ const CreateGroup = ({ isOpen, onClose }) => {
     setSelectedMembers((prev) =>
       prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
     );
+  };
+
+  const handleCreateAIBoredom = async () => {
+    setShowWarning(false);
+    try {
+      setLoading(true);
+      const groupName = "AI Boredom Zone 🤖💥";
+      const groupAvatarUrl = "./avatar2.png";
+
+      let membersList = [];
+      if (isLocalMode) {
+        const allUsers = JSON.parse(localStorage.getItem("sqlite_users") || "[]")
+          .filter((u) => u.id !== currentUser.id);
+        membersList = allUsers.map(u => u.id);
+      } else {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        const allUsers = querySnapshot.docs
+          .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+          .filter((u) => u.id !== currentUser.id);
+        membersList = allUsers.map(u => u.id);
+      }
+
+      if (membersList.length === 0) {
+        membersList = ["alice_id", "bob_id", "gemini_ai_id"];
+      }
+
+      if (isLocalMode) {
+        const localChatId = "group_chat_boredom_" + Date.now();
+        const localChats = JSON.parse(localStorage.getItem("sqlite_chats") || "[]");
+        const groupKey = getChatKey(localChatId);
+        const encryptedText = encrypt(`Welcome to the AI Boredom Zone! Prepare to be roasted.`, groupKey);
+
+        const initialMsg = {
+          senderId: "system",
+          text: encryptedText,
+          createdAt: new Date().toISOString()
+        };
+
+        localChats.push({
+          id: localChatId,
+          createdAt: Date.now(),
+          isGroup: true,
+          groupName,
+          groupAvatar: groupAvatarUrl,
+          members: [currentUser.id, ...membersList],
+          messages: [initialMsg],
+          isAIBoredom: true
+        });
+        localStorage.setItem("sqlite_chats", JSON.stringify(localChats));
+
+        const allMemberIds = [currentUser.id, ...membersList];
+        const userchats = JSON.parse(localStorage.getItem("sqlite_userchats") || "{}");
+        allMemberIds.forEach(memberId => {
+          if (!userchats[memberId]) userchats[memberId] = { chats: [] };
+          userchats[memberId].chats.push({
+            chatId: localChatId,
+            isGroup: true,
+            groupName,
+            groupAvatar: groupAvatarUrl,
+            lastMessage: encryptedText,
+            isSeen: memberId === currentUser.id,
+            updatedAt: Date.now(),
+            isAIBoredom: true
+          });
+        });
+        localStorage.setItem("sqlite_userchats", JSON.stringify(userchats));
+        window.dispatchEvent(new CustomEvent("local-db-update"));
+
+        toast.success("Entered the AI Boredom Zone!");
+        
+        const groupObj = {
+          id: localChatId,
+          groupName,
+          groupAvatar: groupAvatarUrl,
+          members: allMemberIds,
+          isAIBoredom: true
+        };
+        changeChat(localChatId, groupObj, true);
+        onClose();
+        return;
+      }
+
+      // Cloud Firebase mode
+      const chatRef = collection(db, "chats");
+      const newChatDocRef = doc(chatRef);
+      const newChatId = newChatDocRef.id;
+      const groupKey = getChatKey(newChatId);
+      const encryptedText = encrypt(`Welcome to the AI Boredom Zone! Prepare to be roasted.`, groupKey);
+
+      await setDoc(newChatDocRef, {
+        createdAt: Date.now(),
+        isGroup: true,
+        groupName,
+        groupAvatar: groupAvatarUrl,
+        members: [currentUser.id, ...membersList],
+        messages: [
+          {
+            senderId: "system",
+            text: encryptedText,
+            createdAt: Date.now()
+          }
+        ],
+        isAIBoredom: true
+      });
+
+      const allMemberIds = [currentUser.id, ...membersList];
+      for (const memberId of allMemberIds) {
+        const userChatsRef = doc(db, "userchats", memberId);
+        await updateDoc(userChatsRef, {
+          chats: arrayUnion({
+            chatId: newChatId,
+            isGroup: true,
+            groupName,
+            groupAvatar: groupAvatarUrl,
+            lastMessage: encryptedText,
+            isSeen: memberId === currentUser.id,
+            updatedAt: Date.now(),
+            isAIBoredom: true
+          })
+        });
+      }
+
+      toast.success("Entered the AI Boredom Zone!");
+      const groupObj = {
+        id: newChatId,
+        groupName,
+        groupAvatar: groupAvatarUrl,
+        members: allMemberIds,
+        isAIBoredom: true
+      };
+      changeChat(newChatId, groupObj, true);
+      onClose();
+    } catch (err) {
+      console.error("Create AI Boredom group error:", err);
+      toast.error("Failed to enter the Boredom Zone.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreate = async (e) => {
@@ -223,6 +362,18 @@ const CreateGroup = ({ isOpen, onClose }) => {
 
       {/* Content Form */}
       <form className="wa-group-drawer__content" onSubmit={handleCreate}>
+        {/* AI Boredom Group Button */}
+        <div className="wa-group-drawer__ai-boredom-section">
+          <button
+            type="button"
+            className="wa-group-drawer__ai-boredom-btn"
+            onClick={() => setShowWarning(true)}
+            disabled={loading}
+          >
+            🤖 Create AI Boredom Group 💥
+          </button>
+        </div>
+
         {/* Group Photo & subject */}
         <div className="wa-group-drawer__fields">
           <label className="wa-group-drawer__avatar-wrapper" htmlFor="group-avatar-input">
@@ -332,6 +483,41 @@ const CreateGroup = ({ isOpen, onClose }) => {
           {loading ? "..." : "✓"}
         </button>
       </form>
+
+      {/* AI Boredom Warning Modal */}
+      {showWarning && (
+        <div className="wa-group-drawer__warning-overlay">
+          <div className="wa-group-drawer__warning-modal">
+            <div className="wa-group-drawer__warning-icon">⚠️</div>
+            <h3 className="wa-group-drawer__warning-title">AI BOREDOM ZONE WARNING</h3>
+            <p className="wa-group-drawer__warning-text">
+              You are about to enter a highly roasted chat zone! All other members will be AI bots simulating your contacts.
+            </p>
+            <p className="wa-group-drawer__warning-text">
+              They will troll and mock you based on your responses. <strong>You cannot leave this group</strong> unless you either win the roast battle (evaluated by AI) or beat the Breakout game to escape.
+            </p>
+            <p className="wa-group-drawer__warning-text wa-group-drawer__warning-highlight">
+              Do you dare to proceed?
+            </p>
+            <div className="wa-group-drawer__warning-actions">
+              <button
+                type="button"
+                className="wa-group-drawer__warning-btn wa-group-drawer__warning-btn--cancel"
+                onClick={() => setShowWarning(false)}
+              >
+                Back Out
+              </button>
+              <button
+                type="button"
+                className="wa-group-drawer__warning-btn wa-group-drawer__warning-btn--confirm"
+                onClick={handleCreateAIBoredom}
+              >
+                Enter Zone! 😈
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
