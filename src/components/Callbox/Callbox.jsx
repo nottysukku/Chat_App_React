@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { ZegoUIKitPrebuilt } from '@zegocloud/zego-uikit-prebuilt';
 import './callbox.css';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -25,54 +24,69 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink }) => {
   const [username, setUsername] = useState('');
   const [isCustomRoomIDSet, setIsCustomRoomIDSet] = useState(false);
   const containerRef = useRef(null);
-  const zegoRef = useRef(null);
+  const jitsiRef = useRef(null);
 
   useEffect(() => {
     if (!isCustomRoomIDSet || !roomID) return;
 
-    const initCall = async () => {
+    // Load Jitsi Meet external API script dynamically
+    const script = document.createElement('script');
+    script.src = 'https://meet.jit.si/external_api.js';
+    script.async = true;
+    
+    script.onload = () => {
       if (!containerRef.current) return;
 
-      const appID = 61116413;
-      const serverSecret = import.meta.env.VITE_SERVER_SECRET;
-      const userID = randomID(5);
-      const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-        appID,
-        serverSecret,
-        roomID,
-        userID,
-        username || `User_${userID}` // Use provided username or generate a default one
-      );
-
-      zegoRef.current = ZegoUIKitPrebuilt.create(kitToken);
-
-      await zegoRef.current.joinRoom({
-        container: containerRef.current,
-        scenario: {
-          mode: ZegoUIKitPrebuilt.OneONoneCall,
+      const domain = 'meet.jit.si';
+      const options = {
+        roomName: `ChatAppRoom_${roomID}`,
+        width: '100%',
+        height: '100%',
+        parentNode: containerRef.current,
+        userInfo: {
+          displayName: username || `User_${randomID(4)}`
         },
-        showPreJoinView: true,
-        showLeavingView: true,
-        showRoomDetailsButton: true,
-        showUserList: false,
-        showLayoutButton: false,
-        turnOnMicrophoneWhenJoining: true,
-        turnOnCameraWhenJoining: isVideoCall,
-        showMyCameraToggleButton: isVideoCall,
-        showMyMicrophoneToggleButton: true,
-        showAudioVideoSettingsButton: true,
-        onLeaveRoom: () => {
+        configOverwrite: {
+          startWithAudioMuted: false,
+          startWithVideoMuted: !isVideoCall,
+          prejoinPageEnabled: false, // Skip prejoin page to connect instantly
+        },
+        interfaceConfigOverwrite: {
+          TOOLBAR_BUTTONS: [
+            'microphone', 'camera', 'closedcaptions', 'desktop', 'embedmeeting', 'fullscreen',
+            'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+            'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+            'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+            'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+            'security'
+          ]
+        }
+      };
+
+      try {
+        const api = new window.JitsiMeetExternalAPI(domain, options);
+        jitsiRef.current = api;
+
+        api.addEventListener('videoConferenceLeft', () => {
           onClose();
-        },
-      });
+        });
+      } catch (err) {
+        console.error("Jitsi Meet initialization failed:", err);
+        toast.error("Failed to start the call. Please try again.");
+      }
     };
 
-    initCall();
+    script.onerror = () => {
+      toast.error("Failed to load call libraries. Check your internet connection.");
+    };
+
+    document.body.appendChild(script);
 
     return () => {
-      if (zegoRef.current) {
-        zegoRef.current.destroy();
+      if (jitsiRef.current && typeof jitsiRef.current.dispose === 'function') {
+        jitsiRef.current.dispose();
       }
+      script.remove();
     };
   }, [roomID, isVideoCall, onClose, isCustomRoomIDSet, username]);
 
