@@ -19,6 +19,7 @@ import upload from "../../lib/upload";
 import { format } from "timeago.js";
 import { toast } from "react-toastify";
 import LoadingPopup from "./LoadingPopup";
+import { encrypt, decrypt, getChatKey } from "../../lib/encryption";
 
 const Chat = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -47,13 +48,14 @@ const Chat = () => {
 
   const updateUserChatsSummary = async (lastMsgText) => {
     const userIDs = isGroup ? (groupInfo?.members || []) : [currentUser.id, user.id];
+    const encryptedLastMsg = encrypt(lastMsgText, getChatKey(chatId));
     
     if (isLocalMode) {
       userIDs.forEach((id) => {
         const userChats = localDb.getUserChats(id);
         const idx = userChats.findIndex((c) => c.chatId === chatId);
         if (idx > -1) {
-          userChats[idx].lastMessage = lastMsgText;
+          userChats[idx].lastMessage = encryptedLastMsg;
           userChats[idx].isSeen = id === currentUser.id;
           userChats[idx].updatedAt = Date.now();
           localDb.updateUserChats(id, userChats);
@@ -73,7 +75,7 @@ const Chat = () => {
           const chatIndex = userChatsData.chats.findIndex((c) => c.chatId === chatId);
 
           if (chatIndex >= 0) {
-            userChatsData.chats[chatIndex].lastMessage = lastMsgText;
+            userChatsData.chats[chatIndex].lastMessage = encryptedLastMsg;
             userChatsData.chats[chatIndex].isSeen = id === currentUser.id;
             userChatsData.chats[chatIndex].updatedAt = Date.now();
             await updateDoc(userChatsRef, { chats: userChatsData.chats });
@@ -334,11 +336,12 @@ const Chat = () => {
             const chats = localDb._getTable("chats");
             const chatIndex = chats.findIndex((c) => c.id === chatId);
             if (chatIndex > -1) {
+              const encryptedImg = encrypt(fileBase64, getChatKey(chatId));
               const newMsg = {
                 senderId: currentUser.id,
                 text: "",
                 createdAt: new Date().toISOString(),
-                img: fileBase64,
+                img: encryptedImg,
                 type: file.type,
                 seen: false
               };
@@ -363,6 +366,8 @@ const Chat = () => {
           setUploadProgress(progress); // Update progress
         });
 
+        const encryptedFileUrl = encrypt(fileUrl, getChatKey(chatId));
+
         await updateDoc(doc(db, "chats", chatId), {
           messages: [
             ...chat.messages,
@@ -370,7 +375,7 @@ const Chat = () => {
               senderId: currentUser.id,
               text: "",
               createdAt: new Date(),
-              img: fileUrl,
+              img: encryptedFileUrl,
               type: file.type,
               seen: false
             },
@@ -397,12 +402,14 @@ const Chat = () => {
         const chats = localDb._getTable("chats");
         const chatIndex = chats.findIndex((c) => c.id === chatId);
         if (chatIndex > -1) {
+          const encryptedText = encrypt(text, getChatKey(chatId));
+          const encryptedImg = imgBase64 ? encrypt(imgBase64, getChatKey(chatId)) : null;
           const newMsg = {
             senderId: currentUser.id,
-            text,
+            text: encryptedText,
             createdAt: new Date().toISOString(),
             seen: false,
-            ...(imgBase64 && { img: imgBase64 }),
+            ...(encryptedImg && { img: encryptedImg }),
           };
           chats[chatIndex].messages.push(newMsg);
           localDb._setTable("chats", chats);
@@ -444,18 +451,21 @@ const Chat = () => {
         });
       }
 
+      const encryptedText = encrypt(text, getChatKey(chatId));
+      const encryptedImg = imgUrl ? encrypt(imgUrl, getChatKey(chatId)) : null;
+
       // Update chat messages in Firestore
       await updateDoc(doc(db, "chats", chatId), {
         messages: arrayUnion({
           senderId: currentUser.id,
-          text,
+          text: encryptedText,
           createdAt: new Date(),
           seen: false,
-          ...(imgUrl && { img: imgUrl }),
+          ...(encryptedImg && { img: encryptedImg }),
         }),
       });
 
-      await updateUserChatsSummary(text || (imgUrl ? "[Image]" : ""));
+      await updateUserChatsSummary(text || (encryptedImg ? "[Image]" : ""));
 
       // Show success toast if image was uploaded
       if (img.file) {
@@ -525,11 +535,12 @@ const Chat = () => {
           const chats = localDb._getTable("chats");
           const chatIndex = chats.findIndex((c) => c.id === chatId);
           if (chatIndex > -1) {
+            const encryptedAudio = encrypt(audioBase64, getChatKey(chatId));
             chats[chatIndex].messages.push({
               senderId: currentUser.id,
               text: "",
               createdAt: new Date().toISOString(),
-              audio: audioBase64,
+              audio: encryptedAudio,
               type: "audio",
               seen: false
             });
@@ -563,12 +574,14 @@ const Chat = () => {
   
       console.log("Uploaded Audio URL:", audioUrl); // Check if URL is returned
   
+      const encryptedAudioUrl = encrypt(audioUrl, getChatKey(chatId));
+  
       await updateDoc(doc(db, "chats", chatId), {
         messages: arrayUnion({
           senderId: currentUser.id,
           text: "",
           createdAt: new Date(),
-          audio: audioUrl,  // Use the uploaded audio URL
+          audio: encryptedAudioUrl,  // Use the encrypted audio URL
           type: "audio",
           seen: false
         }),
@@ -625,9 +638,10 @@ const Chat = () => {
         const chats = localDb._getTable("chats");
         const chatIndex = chats.findIndex((c) => c.id === chatId);
         if (chatIndex > -1) {
+          const encryptedLink = encrypt(generatedLink, getChatKey(chatId));
           chats[chatIndex].messages.push({
             senderId: currentUser.id,
-            text: generatedLink,
+            text: encryptedLink,
             createdAt: new Date().toISOString(),
             type: "link",
             seen: false
@@ -640,10 +654,11 @@ const Chat = () => {
       }
 
       try {
+        const encryptedLink = encrypt(generatedLink, getChatKey(chatId));
         await updateDoc(doc(db, "chats", chatId), {
           messages: arrayUnion({
             senderId: currentUser.id,
-            text: generatedLink,
+            text: encryptedLink,
             createdAt: new Date(),
             type: "link",
             seen: false
@@ -663,7 +678,7 @@ const Chat = () => {
     try {
       const formattedHistory = currentMessages.map(msg => ({
         role: msg.senderId === currentUser.id ? 'user' : 'model',
-        parts: [{ text: msg.text || "" }]
+        parts: [{ text: decrypt(msg.text, getChatKey(chatId)) || "" }]
       }));
       
       const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -679,9 +694,10 @@ const Chat = () => {
       const chats = localDb._getTable("chats");
       const chatIndex = chats.findIndex((c) => c.id === chatId);
       if (chatIndex > -1) {
+        const encryptedResponse = encrypt(aiResponse, getChatKey(chatId));
         chats[chatIndex].messages.push({
           senderId: "gemini_ai_id",
-          text: aiResponse,
+          text: encryptedResponse,
           createdAt: new Date().toISOString(),
         });
         localDb._setTable("chats", chats);
@@ -692,7 +708,7 @@ const Chat = () => {
           const userChats = localDb.getUserChats(id);
           const idx = userChats.findIndex((c) => c.chatId === chatId);
           if (idx > -1) {
-            userChats[idx].lastMessage = aiResponse;
+            userChats[idx].lastMessage = encryptedResponse;
             userChats[idx].isSeen = id === "gemini_ai_id";
             userChats[idx].updatedAt = Date.now();
             localDb.updateUserChats(id, userChats);
@@ -784,7 +800,7 @@ const Chat = () => {
           >
             {message.senderId === "system" ? (
               <div className="wa-chat__system-message">
-                <span>{message.text}</span>
+                <span>{decrypt(message.text, getChatKey(chatId))}</span>
               </div>
             ) : (
               <div className="wa-chat__bubble">
@@ -799,19 +815,18 @@ const Chat = () => {
                 {message.img && (
                   <img
                     className="wa-chat__bubble-img"
-                    src={message.img}
+                    src={decrypt(message.img, getChatKey(chatId))}
                     alt="Image"
                     onError={(e) => (e.target.src = "attach.png")}
                   />
                 )}
                 {message.audio && (
-                  <audio controls className="wa-chat__bubble-audio">
-                    <source src={message.audio} type="audio/mp3" />
+                  <audio controls className="wa-chat__bubble-audio" src={decrypt(message.audio, getChatKey(chatId))}>
                     Your browser does not support the audio element.
                   </audio>
                 )}
                 {message.text && (
-                  <p className="wa-chat__text">{message.text}</p>
+                  <p className="wa-chat__text">{decrypt(message.text, getChatKey(chatId))}</p>
                 )}
                 <span className="wa-chat__time">
                   {format(

@@ -7,6 +7,7 @@ import { doc, getDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db } from "../../../lib/firebase";
 import { useChatStore } from "../../../lib/chatStore";
 import { localDb } from "../../../lib/localDb";
+import { decrypt, getChatKey } from "../../../lib/encryption";
 
 const ChatList = () => {
   const [chats, setChats] = useState([]);
@@ -201,7 +202,7 @@ const ChatList = () => {
               </div>
               <div className="wa-chatlist__bottom-row">
                 <p className="wa-chatlist__last-message">
-                  {chat.lastMessage || "No messages yet"}
+                  {chat.lastMessage ? decrypt(chat.lastMessage, getChatKey(chat.chatId)) : "No messages yet"}
                 </p>
                 {!chat?.isSeen && (
                   <span className="wa-chatlist__unread-dot"></span>

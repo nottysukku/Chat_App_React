@@ -1,5 +1,6 @@
-import { doc, getDoc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, collection, getDocs } from "firebase/firestore";
 import { db } from "./firebase";
+import { encrypt, getChatKey } from "./encryption";
 
 const MOCK_USERS_DATA = [
   { id: "mock_user_1", username: "Emma Watson", avatar: "https://i.pravatar.cc/150?img=32", status: "✨ Live, Love, Laugh" },
@@ -52,41 +53,66 @@ export const runDbHealthCheck = async (currentUser) => {
 
     // Only populate if they have no existing chats (which indicates they are a new user)
     if (currentChats.length === 0) {
-      console.log("New user detected with 0 chats. Seeding 10 mock users and messages...");
+      console.log("New user detected with 0 chats. Querying existing users from Firestore first...");
       
+      // Fetch existing users from Firestore (excluding current user)
+      const usersRef = collection(db, "users");
+      const usersSnap = await getDocs(usersRef);
+      const existingFirestoreUsers = usersSnap.docs
+        .map(docSnap => docSnap.data())
+        .filter(u => u.id !== currentUser.id);
+
+      console.log(`Found ${existingFirestoreUsers.length} existing users in Firestore.`);
+
+      // Combine existing users and pad with mock users to get exactly 10 users
+      let selectedUsers = [...existingFirestoreUsers];
+      if (selectedUsers.length > 10) {
+        // Pick 10 random ones
+        selectedUsers = selectedUsers.sort(() => 0.5 - Math.random()).slice(0, 10);
+      } else if (selectedUsers.length < 10) {
+        const remainingCount = 10 - selectedUsers.length;
+        const remainingMock = MOCK_USERS_DATA.filter(mock => !selectedUsers.some(u => u.id === mock.id));
+        const paddedMock = remainingMock.slice(0, remainingCount);
+        selectedUsers = [...selectedUsers, ...paddedMock];
+      }
+
       const newChatsList = [];
 
-      for (let i = 0; i < MOCK_USERS_DATA.length; i++) {
-        const mockUser = MOCK_USERS_DATA[i];
+      for (let i = 0; i < selectedUsers.length; i++) {
+        const userToSeed = selectedUsers[i];
         
-        // A. Ensure the mock user document exists in the "users" collection
-        const mockUserRef = doc(db, "users", mockUser.id);
-        const mockUserSnap = await getDoc(mockUserRef);
-        if (!mockUserSnap.exists()) {
-          await setDoc(mockUserRef, {
-            id: mockUser.id,
-            username: mockUser.username,
-            avatar: mockUser.avatar,
-            status: mockUser.status,
-            email: `${mockUser.id}@chatapp.local`,
-            blocked: [],
-            isOnline: true // Show mock users as online so we can test double tick receipts!
+        // A. Ensure the user document exists in the "users" collection
+        const userDocRef = doc(db, "users", userToSeed.id);
+        const userDocSnap = await getDoc(userDocRef);
+        if (!userDocSnap.exists()) {
+          await setDoc(userDocRef, {
+            id: userToSeed.id,
+            username: userToSeed.username,
+            avatar: userToSeed.avatar || "./avatar2.png",
+            status: userToSeed.status || "Hey! I'm using ChatApp.",
+            email: userToSeed.email || `${userToSeed.id}@chatapp.local`,
+            blocked: userToSeed.blocked || [],
+            isOnline: true // Show seed users as online for testing receipts
           });
         }
 
-        // B. Ensure mock user's "userchats" doc exists
-        const mockUserChatsRef = doc(db, "userchats", mockUser.id);
-        const mockUserChatsSnap = await getDoc(mockUserChatsRef);
-        if (!mockUserChatsSnap.exists()) {
-          await setDoc(mockUserChatsRef, { chats: [] });
+        // B. Ensure user's "userchats" doc exists
+        const userChatsDocRef = doc(db, "userchats", userToSeed.id);
+        const userChatsDocSnap = await getDoc(userChatsDocRef);
+        if (!userChatsDocSnap.exists()) {
+          await setDoc(userChatsDocRef, { chats: [] });
         }
 
         // C. Create a unique chat document ID
-        const chatId = `chat_${currentUser.id}_${mockUser.id}`;
+        const chatId = `chat_${currentUser.id}_${userToSeed.id}`;
         const chatRef = doc(db, "chats", chatId);
         const chatSnap = await getDoc(chatRef);
 
         const greetingText = MOCK_GREETINGS[i % MOCK_GREETINGS.length];
+        
+        // Encrypt the greeting text using the chat key
+        const chatKey = getChatKey(chatId);
+        const encryptedGreeting = encrypt(greetingText, chatKey);
 
         if (!chatSnap.exists()) {
           // D. Create the chat document with a greeting message
@@ -94,8 +120,8 @@ export const runDbHealthCheck = async (currentUser) => {
             createdAt: Date.now() - (10 - i) * 60000,
             messages: [
               {
-                senderId: mockUser.id,
-                text: greetingText,
+                senderId: userToSeed.id,
+                text: encryptedGreeting,
                 createdAt: new Date(Date.now() - (10 - i) * 60000),
                 seen: false
               }
@@ -106,17 +132,17 @@ export const runDbHealthCheck = async (currentUser) => {
         // E. Add to current user's chats array
         newChatsList.push({
           chatId: chatId,
-          lastMessage: greetingText,
-          receiverId: mockUser.id,
+          lastMessage: encryptedGreeting,
+          receiverId: userToSeed.id,
           updatedAt: Date.now() - (10 - i) * 60000,
           isSeen: false // Show as unread
         });
 
-        // F. Add to mock user's chats array
-        await updateDoc(mockUserChatsRef, {
+        // F. Add to other user's chats array
+        await updateDoc(userChatsDocRef, {
           chats: arrayUnion({
             chatId: chatId,
-            lastMessage: greetingText,
+            lastMessage: encryptedGreeting,
             receiverId: currentUser.id,
             updatedAt: Date.now() - (10 - i) * 60000,
             isSeen: true
@@ -129,7 +155,7 @@ export const runDbHealthCheck = async (currentUser) => {
         chats: newChatsList
       });
 
-      console.log("Seeding complete! 10 mock users and messages added successfully.");
+      console.log("Seeding complete! 10 users and encrypted greetings added successfully.");
     }
 
     // Set check flag in session storage so it doesn't run again until reload

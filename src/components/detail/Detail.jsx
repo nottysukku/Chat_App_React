@@ -7,6 +7,7 @@ import { saveAs } from 'file-saver';
 import "./detail.css";
 import { toast } from "react-toastify";
 import { localDb } from "../../lib/localDb";
+import { encrypt, decrypt, getChatKey } from "../../lib/encryption";
 
 const Detail = () => {
   const { chat, receiverId, chatId, user, isGroup, groupInfo, isCurrentUserBlocked, isReceiverBlocked, changeBlock, resetChat } = useChatStore();
@@ -46,7 +47,7 @@ const Detail = () => {
               ?.filter((message) => message.img)
               .map((message, index) => ({
                 id: index,
-                url: message.img,
+                url: decrypt(message.img, getChatKey(chatId)),
                 name: message.fileName || `photo_${index + 1}.png`,
               }));
             setSharedPhotos(photos || []);
@@ -65,7 +66,7 @@ const Detail = () => {
             ?.filter((message) => message.img)
             .map((message, index) => ({
               id: index,
-              url: message.img,
+              url: decrypt(message.img, getChatKey(chatId)),
               name: message.fileName || `photo_${index + 1}.png`,
             }));
           setSharedPhotos(photos || []);
@@ -125,6 +126,8 @@ const Detail = () => {
     if (!chatId || !groupInfo) return;
 
     try {
+      const encryptedExitText = encrypt(`${currentUser.username} left the group`, getChatKey(chatId));
+
       if (isLocalMode) {
         // SQLite local exit group
         // 1. Remove currentUser.id from group members list in chats table
@@ -135,7 +138,7 @@ const Detail = () => {
           // Push a system message that the user left
           chats[chatIdx].messages.push({
             senderId: "system",
-            text: `${currentUser.username} left the group`,
+            text: encryptedExitText,
             createdAt: new Date().toISOString()
           });
           localDb._setTable("chats", chats);
@@ -152,7 +155,7 @@ const Detail = () => {
           if (userchats[memberId]) {
             const idx = userchats[memberId].chats.findIndex(c => c.chatId === chatId);
             if (idx > -1) {
-              userchats[memberId].chats[idx].lastMessage = `${currentUser.username} left the group`;
+              userchats[memberId].chats[idx].lastMessage = encryptedExitText;
               userchats[memberId].chats[idx].updatedAt = Date.now();
             }
           }
@@ -175,7 +178,7 @@ const Detail = () => {
           ...(chatData.messages || []),
           {
             senderId: "system",
-            text: `${currentUser.username} left the group`,
+            text: encryptedExitText,
             createdAt: Date.now()
           }
         ];
@@ -202,7 +205,7 @@ const Detail = () => {
             const mChatsData = mChatsSnap.data();
             const idx = (mChatsData.chats || []).findIndex(c => c.chatId === chatId);
             if (idx > -1) {
-              mChatsData.chats[idx].lastMessage = `${currentUser.username} left the group`;
+              mChatsData.chats[idx].lastMessage = encryptedExitText;
               mChatsData.chats[idx].updatedAt = Date.now();
               await updateDoc(mChatsRef, { chats: mChatsData.chats });
             }

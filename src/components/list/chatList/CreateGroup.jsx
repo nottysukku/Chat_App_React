@@ -6,6 +6,7 @@ import { collection, addDoc, doc, setDoc, getDocs, updateDoc, arrayUnion } from 
 import upload from "../../../lib/upload";
 import { toast } from "react-toastify";
 import "./createGroup.css";
+import { encrypt, getChatKey } from "../../../lib/encryption";
 
 const CreateGroup = ({ isOpen, onClose }) => {
   const { currentUser, isLocalMode } = useUserStore();
@@ -98,9 +99,12 @@ const CreateGroup = ({ isOpen, onClose }) => {
         // SQLite Local group creation
         const localChatId = "group_chat_" + Date.now();
         const localChats = JSON.parse(localStorage.getItem("sqlite_chats") || "[]");
+        const groupKey = getChatKey(localChatId);
+        const encryptedText = encrypt(`${currentUser.username} created group "${groupName}"`, groupKey);
+
         const initialMsg = {
           senderId: "system",
-          text: `${currentUser.username} created group "${groupName}"`,
+          text: encryptedText,
           createdAt: new Date().toISOString()
         };
 
@@ -125,7 +129,7 @@ const CreateGroup = ({ isOpen, onClose }) => {
             isGroup: true,
             groupName,
             groupAvatar: groupAvatarUrl,
-            lastMessage: `${currentUser.username} created group "${groupName}"`,
+            lastMessage: encryptedText,
             isSeen: memberId === currentUser.id,
             updatedAt: Date.now()
           });
@@ -149,7 +153,12 @@ const CreateGroup = ({ isOpen, onClose }) => {
 
       // Cloud Firebase group creation
       const chatRef = collection(db, "chats");
-      const newChatDoc = await addDoc(chatRef, {
+      const newChatDocRef = doc(chatRef);
+      const newChatId = newChatDocRef.id;
+      const groupKey = getChatKey(newChatId);
+      const encryptedText = encrypt(`${currentUser.username} created group "${groupName}"`, groupKey);
+
+      await setDoc(newChatDocRef, {
         createdAt: Date.now(),
         isGroup: true,
         groupName,
@@ -158,7 +167,7 @@ const CreateGroup = ({ isOpen, onClose }) => {
         messages: [
           {
             senderId: "system",
-            text: `${currentUser.username} created group "${groupName}"`,
+            text: encryptedText,
             createdAt: Date.now()
           }
         ]
@@ -170,11 +179,11 @@ const CreateGroup = ({ isOpen, onClose }) => {
         const userChatsRef = doc(db, "userchats", memberId);
         await updateDoc(userChatsRef, {
           chats: arrayUnion({
-            chatId: newChatDoc.id,
+            chatId: newChatId,
             isGroup: true,
             groupName,
             groupAvatar: groupAvatarUrl,
-            lastMessage: `${currentUser.username} created group "${groupName}"`,
+            lastMessage: encryptedText,
             isSeen: memberId === currentUser.id,
             updatedAt: Date.now()
           })
@@ -183,12 +192,12 @@ const CreateGroup = ({ isOpen, onClose }) => {
 
       toast.success(`Group "${groupName}" created!`);
       const groupObj = {
-        id: newChatDoc.id,
+        id: newChatId,
         groupName,
         groupAvatar: groupAvatarUrl,
         members: allMemberIds
       };
-      changeChat(newChatDoc.id, groupObj, true);
+      changeChat(newChatId, groupObj, true);
       onClose();
     } catch (err) {
       console.error("Create group error:", err);
