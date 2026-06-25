@@ -38,6 +38,12 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
   const localStreamRef = useRef(null);
   const activeCallRef = useRef(null);
 
+  // Stabilize onClose callback to prevent effect tear-down/setup cycles on re-renders
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!isCustomRoomIDSet || !roomID) return;
 
@@ -85,7 +91,7 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
 
             incomingCall.on('close', () => {
               toast.info("Call ended by participant.");
-              onClose();
+              onCloseRef.current();
             });
           });
 
@@ -96,7 +102,7 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
             } else {
               toast.error("Call setup error. Please try again.");
             }
-            onClose();
+            onCloseRef.current();
           });
 
         } else {
@@ -121,27 +127,27 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
 
             outgoingCall.on('close', () => {
               toast.info("Call ended by host.");
-              onClose();
+              onCloseRef.current();
             });
           });
 
           peer.on('error', (err) => {
             console.error('Peer guest error:', err);
             toast.error("Could not find or connect to the call. Make sure the Host has created and shared the Room ID first!");
-            onClose();
+            onCloseRef.current();
           });
         }
 
       } catch (err) {
         console.error("WebRTC getUserMedia media device access failed:", err);
         toast.error("Failed to access camera/microphone! Please check permissions.");
-        onClose();
+        onCloseRef.current();
       }
     };
 
     script.onerror = () => {
       toast.error("Failed to load WebRTC libraries. Check your connection.");
-      onClose();
+      onCloseRef.current();
     };
 
     document.body.appendChild(script);
@@ -159,11 +165,11 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
       }
       script.remove();
     };
-  }, [roomID, isVideoCall, onClose, isCustomRoomIDSet, isHost]);
+  }, [roomID, isVideoCall, isCustomRoomIDSet, isHost]);
 
   const handleClose = useCallback(() => {
-    onClose();
-  }, [onClose]);
+    onCloseRef.current();
+  }, []);
 
   const handleShareLink = useCallback(() => {
     const generatedLink = `roomID=${roomID}`;
