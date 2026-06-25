@@ -47,12 +47,10 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
   useEffect(() => {
     if (!isCustomRoomIDSet || !roomID) return;
 
-    // Load PeerJS external library dynamically
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js';
-    script.async = true;
-    
-    script.onload = async () => {
+    let peerTimeout = null;
+    let localStream = null;
+
+    const initializePeer = async () => {
       try {
         // Request camera and microphone access
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -60,6 +58,7 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
           audio: true
         });
         localStreamRef.current = stream;
+        localStream = stream;
         
         if (localVideoRef.current) {
           localVideoRef.current.srcObject = stream;
@@ -67,76 +66,78 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
 
         setCallStatus('Setting up Peer connection...');
 
-        if (isHost) {
-          // Register room Peer ID on public PeerJS server
-          const peer = new window.Peer(`chatapp_room_${roomID.trim()}`);
-          peerRef.current = peer;
+        peerTimeout = setTimeout(() => {
+          if (isHost) {
+            // Register room Peer ID on public PeerJS server
+            const peer = new window.Peer(`chatapp_room_${roomID.trim()}`);
+            peerRef.current = peer;
 
-          peer.on('open', (id) => {
-            console.log('Host registered with Peer ID:', id);
-            setCallStatus('Waiting for other participant to join...');
-          });
-
-          peer.on('call', (incomingCall) => {
-            console.log('Answering incoming call...');
-            setCallStatus('Connected!');
-            activeCallRef.current = incomingCall;
-            
-            incomingCall.answer(stream);
-            incomingCall.on('stream', (remoteStream) => {
-              if (remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = remoteStream;
-              }
+            peer.on('open', (id) => {
+              console.log('Host registered with Peer ID:', id);
+              setCallStatus('Waiting for other participant to join...');
             });
 
-            incomingCall.on('close', () => {
-              toast.info("Call ended by participant.");
-              onCloseRef.current();
-            });
-          });
-
-          peer.on('error', (err) => {
-            console.error('Peer host error:', err);
-            if (err.type === 'id-taken') {
-              toast.error("Room ID already in use! Try joining the room or use a different room ID.");
-            } else {
-              toast.error("Call setup error. Please try again.");
-            }
-            onCloseRef.current();
-          });
-
-        } else {
-          // Joiner registers with a random guest ID
-          const peer = new window.Peer(`chatapp_guest_${randomID(5)}`);
-          peerRef.current = peer;
-
-          peer.on('open', (id) => {
-            console.log('Guest registered with Peer ID:', id);
-            setCallStatus('Connecting to call room host...');
-            
-            // Call the host room ID
-            const outgoingCall = peer.call(`chatapp_room_${roomID.trim()}`, stream);
-            activeCallRef.current = outgoingCall;
-
-            outgoingCall.on('stream', (remoteStream) => {
+            peer.on('call', (incomingCall) => {
+              console.log('Answering incoming call...');
               setCallStatus('Connected!');
-              if (remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = remoteStream;
-              }
+              activeCallRef.current = incomingCall;
+              
+              incomingCall.answer(stream);
+              incomingCall.on('stream', (remoteStream) => {
+                if (remoteVideoRef.current) {
+                  remoteVideoRef.current.srcObject = remoteStream;
+                }
+              });
+
+              incomingCall.on('close', () => {
+                toast.info("Call ended by participant.");
+                onCloseRef.current();
+              });
             });
 
-            outgoingCall.on('close', () => {
-              toast.info("Call ended by host.");
+            peer.on('error', (err) => {
+              console.error('Peer host error:', err);
+              if (err.type === 'id-taken') {
+                toast.error("Room ID already in use! Try joining the room or use a different room ID.");
+              } else {
+                toast.error("Call setup error. Please try again.");
+              }
               onCloseRef.current();
             });
-          });
 
-          peer.on('error', (err) => {
-            console.error('Peer guest error:', err);
-            toast.error("Could not find or connect to the call. Make sure the Host has created and shared the Room ID first!");
-            onCloseRef.current();
-          });
-        }
+          } else {
+            // Joiner registers with a random guest ID
+            const peer = new window.Peer(`chatapp_guest_${randomID(5)}`);
+            peerRef.current = peer;
+
+            peer.on('open', (id) => {
+              console.log('Guest registered with Peer ID:', id);
+              setCallStatus('Connecting to call room host...');
+              
+              // Call the host room ID
+              const outgoingCall = peer.call(`chatapp_room_${roomID.trim()}`, stream);
+              activeCallRef.current = outgoingCall;
+
+              outgoingCall.on('stream', (remoteStream) => {
+                setCallStatus('Connected!');
+                if (remoteVideoRef.current) {
+                  remoteVideoRef.current.srcObject = remoteStream;
+                }
+              });
+
+              outgoingCall.on('close', () => {
+                toast.info("Call ended by host.");
+                onCloseRef.current();
+              });
+            });
+
+            peer.on('error', (err) => {
+              console.error('Peer guest error:', err);
+              toast.error("Could not find or connect to the call. Make sure the Host has created and shared the Room ID first!");
+              onCloseRef.current();
+            });
+          }
+        }, 500); // 500ms delay to let any previous StrictMode unmount cleanup finish completely
 
       } catch (err) {
         console.error("WebRTC getUserMedia media device access failed:", err);
@@ -145,17 +146,43 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
       }
     };
 
-    script.onerror = () => {
-      toast.error("Failed to load WebRTC libraries. Check your connection.");
-      onCloseRef.current();
-    };
+    if (window.Peer) {
+      initializePeer();
+    } else {
+      // Load PeerJS external library dynamically
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js';
+      script.async = true;
+      script.onload = initializePeer;
+      script.onerror = () => {
+        toast.error("Failed to load WebRTC libraries. Check your connection.");
+        onCloseRef.current();
+      };
+      document.body.appendChild(script);
 
-    document.body.appendChild(script);
+      return () => {
+        if (peerTimeout) {
+          clearTimeout(peerTimeout);
+        }
+        if (localStream) {
+          localStream.getTracks().forEach(track => track.stop());
+        }
+        if (activeCallRef.current) {
+          activeCallRef.current.close();
+        }
+        if (peerRef.current) {
+          peerRef.current.destroy();
+        }
+        script.remove();
+      };
+    }
 
     return () => {
-      // Clean up hardware streams and peer connections
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop());
+      if (peerTimeout) {
+        clearTimeout(peerTimeout);
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
       }
       if (activeCallRef.current) {
         activeCallRef.current.close();
@@ -163,7 +190,6 @@ const Callbox = ({ onClose, isVideoCall = true, onShareLink, roomId = '', isHost
       if (peerRef.current) {
         peerRef.current.destroy();
       }
-      script.remove();
     };
   }, [roomID, isVideoCall, isCustomRoomIDSet, isHost]);
 
