@@ -121,9 +121,9 @@ flowchart TD
 
 ---
 
-## 📞 **WebRTC P2P Call Signaling Flow**
+## 📡 **WebRTC P2P Call Signaling & Media Engine**
 
-Real-time audio and video calling is implemented using raw WebRTC streams, with PeerJS providing P2P connection handling:
+Real-time audio, video, and data communication is implemented using WebRTC, with PeerJS serving as the signaling wrapper. The engine supports 1-on-1 calls, full mesh multi-party group calls, screen sharing, and interactive data synchronization.
 
 ```mermaid
 sequenceDiagram
@@ -141,6 +141,36 @@ sequenceDiagram
     Host->>Guest: Answer with local stream and pipe remote streams
     Note over Host, Guest: P2P Peer Connection Established!
 ```
+
+### **Advanced Calling Features & Optimizations**
+
+1. **Full Mesh P2P Group Calls**
+   - Supports multi-user layout structures using a star-signaling mesh topology.
+   - When calling in a group chat, the initiator acts as the core signal node. Group members connect to the active call room and propagate connection configurations dynamically to construct client-to-client WebRTC peer meshes.
+
+2. **Screen Sharing Integration**
+   - Incorporates real-time desktop capture via `navigator.mediaDevices.getDisplayMedia`.
+   - Replaces active camera tracks across all established peer connections dynamically using `RTCRtpSender.replaceTrack` without interrupting the session.
+
+3. **In-Call Text Chat**
+   - Features a sliding chat drawer within the active call interface.
+   - Allows users to exchange text messages in real-time. Messages are also written back to the persistent database via a hoisted state handler.
+
+4. **Status Syncing over WebRTC Data Channels**
+   - Coordinates parallel `RTCDataChannel` connections to sync call control states in real-time.
+   - Triggers dynamic UI overlays when a peer mutes (`🎙️❌`) or turns off their camera (replacing the video feed with their user avatar).
+
+5. **Non-Blocking Picture-in-Picture (PiP) Mode**
+   - Minimizes the active call interface into a floating, draggable, and resizable HUD docked at the bottom-right of the screen.
+   - Enables users to navigate the app, browse chat lists, and type messages in the background while the call remains active.
+
+6. **Mobile Autoplay & Camera Re-mounting Enhancements**
+   - **Autoplay Overrides**: Handles mobile web browser media policies that block unmuted remote audio/video autoplay. Detects promise rejections and displays a click-to-enable overlay to satisfy user-gesture activation constraints.
+   - **Persistent Video Mounts**: Solves the black screen bug on camera toggle by keeping `<video>` elements mounted in the DOM. Stream visibility is toggled via CSS `display` attributes, preserving the `srcObject` stream reference.
+   - **Auto-Close Timer**: When a remote user disconnects, the app displays a disconnection toast, starts a 10-second countdown, and automatically cleans up call resources and closes the UI if no reconnection happens.
+
+7. **Optimized Back-Navigation Reset**
+   - Prevents the infinite loading spinner on mobile/slower viewports during back-button navigation by decoupling `isChatsLoaded` from standard chat state resets, ensuring clean transition pipelines.
 
 ### **Interactive Signaling Card Actions**
 - **Hosting a Call**: Clicking the call icon generates a unique 5-character alphanumeric room ID and uploads a message bubble of type `call-invite` to Firestore with `callActive: true` and `roomId`. It registers a host node with the ID `chatapp_room_[roomId]` on the public PeerJS server.

@@ -34,6 +34,13 @@ const App = () => {
   }, [fetchUserInfo]);
 
   useEffect(() => {
+    if (!currentUser) {
+      useChatStore.getState().resetChat();
+      useChatStore.getState().resetChatsLoadedState();
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     if (currentUser?.id) {
       // Mark user as online
       updateUserOnlineStatus(currentUser.id, true);

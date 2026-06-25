@@ -639,6 +639,57 @@ const Chat = () => {
     }
   };
 
+  const sendDirectMessage = async (msgText) => {
+    if (!msgText.trim()) return;
+
+    if (isLocalMode || !onlineStatus) {
+      const chats = localDb._getTable("chats");
+      let chatIndex = chats.findIndex((c) => c.id === chatId);
+      
+      const encryptedText = encrypt(msgText, getChatKey(chatId));
+      const newMsg = {
+        senderId: currentUser.id,
+        text: encryptedText,
+        createdAt: new Date().toISOString(),
+        seen: false,
+        synced: isLocalMode ? true : false,
+      };
+
+      if (chatIndex > -1) {
+        chats[chatIndex].messages.push(newMsg);
+      } else {
+        chats.push({
+          id: chatId,
+          createdAt: Date.now(),
+          messages: [newMsg],
+        });
+        chatIndex = chats.length - 1;
+      }
+      localDb._setTable("chats", chats);
+
+      updateUserChatsSummary(msgText);
+      endRef.current?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+
+    try {
+      const encryptedText = encrypt(msgText, getChatKey(chatId));
+
+      await updateDoc(doc(db, "chats", chatId), {
+        messages: arrayUnion({
+          senderId: currentUser.id,
+          text: encryptedText,
+          createdAt: new Date(),
+          seen: false
+        }),
+      });
+
+      await updateUserChatsSummary(msgText);
+    } catch (err) {
+      console.error("Error sending call chat message:", err);
+    }
+  };
+
   const startRecording = async () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       toast.error("Your browser does not support audio recording.");
@@ -1880,10 +1931,15 @@ const Chat = () => {
       {callboxVisible && (
         <Callbox
           roomId={activeCallRoomId}
+          chatId={chatId}
           isHost={activeCallIsHost}
           isVideoCall={activeCallIsVideo}
           onShareLink={handleShareLink}
           onClose={handleCallClose}
+          localUser={currentUser}
+          remoteUser={activeUser || user}
+          onSendMessage={sendDirectMessage}
+          messages={chat?.messages || []}
         />
       )}
 

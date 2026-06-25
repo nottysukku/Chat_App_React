@@ -84,7 +84,11 @@ export const useChatStore = create((set) => ({
       userStatus: null,  // Reset status on chat reset
       isCurrentUserBlocked: false,
       isReceiverBlocked: false,
-      isChatsLoaded: false,
     });
+  },
+
+  // Reset loading state for initial load coordination
+  resetChatsLoadedState: () => {
+    set({ isChatsLoaded: false });
   },
 }));
