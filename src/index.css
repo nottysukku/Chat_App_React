@@ -254,6 +254,7 @@ body {
   display: flex;
   width: 100%;
   height: 100vh;
+  height: 100dvh;
   background: radial-gradient(circle at 10% 10%, rgba(var(--wa-teal-rgb), 0.18) 0%, transparent 45%),
               radial-gradient(circle at 90% 90%, rgba(var(--wa-teal-rgb), 0.18) 0%, transparent 45%),
               #070b0e;
@@ -294,6 +295,7 @@ html.light .app {
   width: 100%;
   max-width: 1600px;
   height: calc(100vh - 38px);
+  height: calc(100dvh - 38px);
   margin: 19px auto;
   display: flex;
   overflow: hidden;
@@ -341,6 +343,7 @@ html.light .main-container {
   align-items: center;
   justify-content: center;
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   background-color: var(--bg-primary);
   gap: 20px;
@@ -468,6 +471,7 @@ html.light .main-container {
   .main-container {
     margin: 0 !important;
     height: 100vh !important;
+    height: 100dvh !important;
     max-width: 100% !important;
     border-radius: 0 !important;
     border: none !important;

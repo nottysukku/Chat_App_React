@@ -8,6 +8,7 @@
   background-color: var(--bg-chat);
   position: relative;
   border-left: 1px solid var(--border-color);
+  overflow: hidden;
 }
 
 /* ===== Header ===== */
@@ -42,6 +43,9 @@
   align-items: center;
   justify-content: center;
   transition: background-color var(--transition-fast);
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
 }
 
 .wa-chat__back-btn:hover {
@@ -53,6 +57,7 @@
   height: 40px;
   border-radius: var(--radius-full);
   object-fit: cover;
+  flex-shrink: 0;
 }
 
 .wa-chat__header-info {
@@ -79,6 +84,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .wa-chat__icon-btn {
@@ -272,6 +278,21 @@ html.light .wa-chat__icon-btn img {
   bottom: 50px;
   right: 0;
   z-index: 999;
+}
+
+@media (max-width: 480px) {
+  .wa-chat__emoji-picker {
+    position: fixed !important;
+    bottom: 60px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    z-index: 9999 !important;
+  }
+  .wa-chat__emoji-picker .EmojiPickerReact {
+    width: 290px !important;
+    height: 300px !important;
+  }
 }
 
 .wa-chat__send-btn {
@@ -523,7 +544,7 @@ html.light .wa-chat__icon-btn img {
   .wa-chat__text-input {
     height: 36px !important;
     padding: 8px 12px !important;
-    font-size: 13.5px !important;
+    font-size: 16px !important;
   }
   .wa-chat__send-btn {
     width: 36px !important;
@@ -824,4 +845,35 @@ html.light .wa-chat__icon-btn img {
 
 .wa-chat__call-btn--cancel:hover {
   background: rgba(148, 163, 184, 0.3);
+}
+
+/* Small device adjustments for OnePlus Nord 3 5G and other narrow smartphones */
+@media (max-width: 380px) {
+  .wa-chat__input {
+    padding: 4px 6px !important;
+    gap: 4px !important;
+  }
+  .wa-chat__input-icons {
+    gap: 4px !important;
+  }
+  .wa-chat__input-icons label,
+  .wa-chat__input-icons button {
+    padding: 4px !important;
+  }
+  .wa-chat__input-icons img {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  .wa-chat__text-input {
+    padding: 6px 8px !important;
+    font-size: 16px !important;
+  }
+  .wa-chat__emoji-btn {
+    width: 28px !important;
+    height: 28px !important;
+  }
+  .wa-chat__send-btn {
+    width: 32px !important;
+    height: 32px !important;
+  }
 }

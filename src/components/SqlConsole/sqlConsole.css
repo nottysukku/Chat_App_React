@@ -6,6 +6,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(10, 15, 30, 0.7);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);

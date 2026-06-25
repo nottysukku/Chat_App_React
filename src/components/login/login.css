@@ -339,6 +339,10 @@
   .login__title {
     font-size: 20px;
   }
+
+  .login__input {
+    font-size: 16px !important;
+  }
 }
 
 /* ===== Theme Picker ===== */

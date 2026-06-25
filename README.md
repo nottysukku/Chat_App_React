@@ -1,89 +1,252 @@
-# 💬 **React+Firebase Chat** 🚀  
-**Stay connected. Simplify communication. All powered by React and Firebase.**  
-
-## 🌟 **Features You’ll Love**  
-- 🔥 **Seamless Real-time Chat**: Powered by Firebase’s lightning-fast database.  
-- 🌈 **Light and Dark Mode**: Switch themes with a single click!  
-- 🎉 **Media Sharing**: Share images and files effortlessly.  
-- 🔒 **Secure Conversations**: Enjoy end-to-end encrypted communication for peace of mind.  
-- 🗄️ **SQLite Offline Caching & Sync**: Real-time message storage in a local SQLite simulation (`localDb.js`) when offline. Messages sent while offline queue up locally, display a pending clock (`⏳`), and sync automatically with Firebase Firestore once network connection is restored!
-- 🗄️ **Interactive SQL Console**: Run raw SQL queries against the local database directly inside the app for easy debugging and inspection.
+# 💬 **ChatApp: Premium Offline-First Web Client** 🚀  
+**A futuristic, responsive, glassmorphic real-time chat application with E2EE, WebRTC audio/video calls, offline-first SQLite cache storage, and AI game elements. Built with React, Zustand, and Firebase.**
 
 ---
 
-## 🖼️ **Sneak Peek**  
-
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/z0sCI3Xmllo/0.jpg)](https://www.youtube.com/watch?v=z0sCI3Xmllo)
-
-*Switch between dark and light themes with ease!*  
-*Modern, intuitive design for seamless chatting!*  
----
-
-## ⚙️ **Tech Stack**  
-- **Frontend**: React + Material-UI  
-- **Backend**: Firebase Firestore & Authentication  
-- **Real-time Updates**: Firebase Realtime Database  
-- **Deployment**: Firebase Hosting  
+## 🌟 **Executive Overview**
+ChatApp is designed to deliver a high-fidelity, desktop-class messaging experience on both modern desktop viewports and compact mobile viewports (e.g. OnePlus Nord 3 5G, viewports down to 320px). It supports two principal operation environments:
+- **Cloud Mode**: Real-time Firebase-backed synchronization with Firestore databases, Auth, and Storage.
+- **Local Mode (Guest)**: Zero-backend, offline-first local database architecture utilizing an emulated SQLite database driver.
 
 ---
 
-## 🚀 **Getting Started**  
+## 📐 **Architecture & Topology**
+The client application architecture relies on dynamic Zustand stores for global state management and isolates UI layouts into high-performance components. Below is the system component diagram:
 
-### 1️⃣ Clone the Repository  
-```bash
-git clone https://github.com/yourusername/Chat_App_React.git
+```mermaid
+graph TD
+    UI[React View Components] --> ZU[Zustand Store Layer]
+    ZU --> |Cloud User/Chat States| US[userStore]
+    ZU --> |Active Chat Feed| CS[chatStore]
+    US --> FB_A[Firebase Auth]
+    CS --> FB_F[Firebase Firestore Real-time listener]
+    CS --> |Automatic Cache sync| LDB[Local SQLite DB Driver]
+    LDB --> LS[(LocalStorage Backend)]
+    UI --> |Raw SQL Console Interface| LDB
+    UI --> |P2P WebRTC Calls| P2P[PeerJS Engine]
 ```
 
-### 2️⃣ Install Dependencies  
-```bash
-cd Chat_App_React
-npm install  
+### **System Layers**
+1. **View Layer**: Built using React 18, Vite, and custom-styled glassmorphic CSS classes. Layouts adapt dynamically to screen heights using browser dynamic viewports (`100dvh`).
+2. **State Store Layer**: Powered by Zustand. Manages user authentication state, current chats, unread indicators, and local/cloud mode settings.
+3. **Local DB Driver**: Emulates a relational SQLite database inside the client. Runs queries against raw stringified arrays stored in `localStorage` acting as the relational disk blocks.
+4. **Signaling/WebRTC Engine**: Enables peer-to-peer audio and video calls. Registers signaling nodes over PeerJS public hosts and manages RTCPeerConnection stream pipelines directly between client cameras and microphones.
+
+---
+
+## 🔒 **Security & End-to-End Encryption (E2EE)**
+
+To protect conversation privacy, ChatApp uses a lightweight, client-side encryption wrapper around all text message payloads.
+
+```mermaid
+flowchart LR
+    subgraph Encryption Flow
+        A[Plaintext String] --> B[XOR rotating-key byte cipher]
+        C[Derived Chat Key] --> B
+        B --> D[Encrypted Byte Array]
+        D --> E[Base64 Encoding]
+        E --> F[Prepended 'E2EE_' Ciphertext]
+    end
+    subgraph Decryption Flow
+        F --> G[Check for 'E2EE_' prefix]
+        G --> H[Strip prefix & decode Base64]
+        H --> I[XOR rotating-key byte decryption]
+        C --> I
+        I --> J[Decrypted Plaintext String]
+    end
 ```
 
-### 3️⃣ Set up Firebase  
-1. Go to [Firebase Console](https://console.firebase.google.com/).  
-2. Create a project, and configure Firestore and Authentication.  
-3. Add your Firebase config details to a `.env` file:  
+### **Cryptographic Mechanics (`encryption.js`)**
+- **Key Derivation**: For any conversation, a unique encryption key is dynamically derived from the conversation's `chatId` combined with an app-wide static salt:
+  $$\text{Key} = \text{chatId} + \text{"\_secure\_e2ee\_2026"}$$
+- **XOR Rotating Byte Cipher**: Text payloads are encoded into byte streams using `TextEncoder` and XORed byte-by-byte with a rotating key byte array combined with the loop index:
+  $$\text{CipherByte}[i] = \text{TextByte}[i] \oplus (\text{KeyByte}[i \bmod \text{KeyLength}] \oplus (i \bmod 256))$$
+- **Serialization**: The resulting encrypted byte array is base64-encoded and prepended with a system-wide E2EE header marker `E2EE_`.
+- **Handling Decryption**: When reading incoming messages or cached entries, payloads are checked for the `E2EE_` prefix. If present, the base64 ciphertext is decoded, run through the inverse XOR rotation, and decoded back into standard text using `TextDecoder`. Unencrypted legacy messages or media elements bypass decryption smoothly.
 
-   ```env
-   REACT_APP_FIREBASE_API_KEY=your-api-key
-   REACT_APP_FIREBASE_AUTH_DOMAIN=your-auth-domain
-   REACT_APP_FIREBASE_PROJECT_ID=your-project-id
-   REACT_APP_FIREBASE_STORAGE_BUCKET=your-storage-bucket
-   REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your-messaging-id
-   REACT_APP_FIREBASE_APP_ID=your-app-id
-   ```
+---
 
-### 4️⃣ Run the App  
-```bash
-npm start
+## 🗄️ **SQLite Emulator Relational Layer**
+
+A core driver `localDb.js` emulates relational database execution. It parses incoming queries and executes SQL statements against collections inside LocalStorage.
+
+### **Emulated Database Schema**
+
+| Table Name | LocalStorage Key | Attributes / JSON Schema |
+| :--- | :--- | :--- |
+| **`users`** | `sqlite_users` | `id` (PK), `username`, `email`, `password`, `avatar`, `status`, `blocked` (Array) |
+| **`chats`** | `sqlite_chats` | `id` (PK), `createdAt` (Timestamp), `messages` (Array of message objects) |
+| **`userchats`** | `sqlite_userchats` | Dictionary indexed by `userId` containing lists of `{ chatId, lastMessage, receiverId, updatedAt, isSeen }` |
+| **`stories`** | `sqlite_stories` | `id` (PK), `userId`, `username`, `userAvatar`, `content` (Text or media path), `type`, `createdAt`, `expiresAt` |
+
+### **Query Execution**
+The emulated database provides an interactive `query(sql, params)` execution route:
+- **`SELECT`**: Matches targeted patterns to filter items by `id` or expires tags. Expired stories are auto-filtered out based on timestamp comparisons.
+- **`INSERT`**: Appends records to the JSON tables and updates index records.
+- **`UPDATE`**: Selects items and modifies fields (e.g., updating user status or appending messages into chat blocks).
+- **`DELETE`**: Discards records by filtering them out from table lists.
+- **Reactivity Event**: Upon performing any successful SQL modification, the database dispatches a custom browser event `"local-db-update"`. Reactive React modules catch this event and automatically refresh their local states.
+
+---
+
+## 📡 **Offline-First Synchronization State Machine**
+
+ChatApp supports fully offline actions. When network connections drop, the application transitions to an offline queueing loop to preserve and sync data:
+
+```mermaid
+flowchart TD
+    A[User clicks Send Message] --> B{Network Online?}
+    B -- Yes --> C[Upload directly to Firebase Firestore]
+    C --> D[Cache message copy to Local SQLite DB with synced=true]
+    B -- No --> E[Intercept send action]
+    E --> F[Queue message in Local SQLite DB with synced=false]
+    F --> G[Render bubble in chat view with pending indicator ⏳]
+    G --> H[Wait for browser 'online' event]
+    H --> I[Reconnection Listener fires syncOfflineMessages]
+    I --> J[Read all unsynced messages from SQLite]
+    J --> K[Upload batch to Firebase Firestore]
+    K --> L[Update SQLite records to synced=true]
+    L --> M[Refresh Chat State & Trigger Toasts]
 ```
 
+### **Detailed Sync Behavior**
+1. **Offline Interception**: If `navigator.onLine` returns `false` during a chat send event, the client stops network uploads and directs the message payload directly to the SQLite local storage database.
+2. **Local Queuing**: The message payload is appended to the local SQLite chat messages array with a metadata flag `synced: false`.
+3. **Pending UI Rendering**: In the messages feed, messages flagged with `synced: false` are rendered with an explicit pending indicator (`⏳`).
+4. **Reconnection Handler**: A global window listener monitors the `'online'` event. Upon network restoration:
+   - The sync process pulls all messages with `synced: false` from the emulated SQLite driver.
+   - It performs an upload batch to push these messages to Firebase Firestore.
+   - It updates the SQLite entries to `synced: true`.
+   - The pending indicator (`⏳`) disappears in real-time, and a success toast notification appears.
 
 ---
 
-## 🗄️ **SQLite Offline-First Architecture**
-This application uses a local SQLite emulation database (`localDb.js` / Web SQL simulation) to provide a fully offline-first user experience for both local and cloud modes:
-1. **Message Caching**: Every message fetched from Cloud Mode (Firebase) is automatically cached locally in the SQLite database.
-2. **Offline Mode**: If the user loses connection (`navigator.onLine === false`), the app seamlessly falls back to reading the cached messages from the SQLite database.
-3. **Message Queueing**: Outgoing messages, images, audio recordings, and shared WebRTC links sent offline are queued in SQLite with a `synced: false` flag and rendered instantly in the chat feed with a pending icon (`⏳`).
-4. **Auto-Reconnection Sync**: Upon returning online, a network status listener triggers `syncOfflineMessages()`, uploading queued messages to Firestore and updating their SQLite records to `synced: true` with a success toast.
-5. **Interactive SQL Console**: Developers can open the interactive SQL console in the header to run raw SQL queries directly on the SQLite database (e.g. `SELECT * FROM chats`, `SELECT * FROM users`, etc.).
+## 📞 **WebRTC P2P Call Signaling Flow**
+
+Real-time audio and video calling is implemented using raw WebRTC streams, with PeerJS providing P2P connection handling:
+
+```mermaid
+sequenceDiagram
+    participant Host as Call Host (Caller)
+    participant PeerJS as PeerJS Server
+    participant Firebase as Firebase Firestore
+    participant Guest as Call Guest (Callee)
+
+    Host->>PeerJS: Register peer ID: chatapp_room_[roomId]
+    Host->>Firebase: Send calling card message (callActive=true)
+    Firebase-->>Guest: Live update event (Realtime Listener)
+    Note over Guest: Renders calling card with "Accept" / "Decline"
+    Guest->>PeerJS: Create guest peer & call Host's room ID
+    PeerJS-->>Host: Connect and send incoming WebRTC call stream
+    Host->>Guest: Answer with local stream and pipe remote streams
+    Note over Host, Guest: P2P Peer Connection Established!
+```
+
+### **Interactive Signaling Card Actions**
+- **Hosting a Call**: Clicking the call icon generates a unique 5-character alphanumeric room ID and uploads a message bubble of type `call-invite` to Firestore with `callActive: true` and `roomId`. It registers a host node with the ID `chatapp_room_[roomId]` on the public PeerJS server.
+- **Accepting a Call**: The receiver detects the card and clicks **Accept**. The client creates a guest node `chatapp_guest_[guestId]` and calls the host's peer room ID.
+- **Decline/Cancel**: Updates the Firestore calling card message status to `declined` or `ended`, signaling the other peer to immediately close hardware camera streams and clean up listeners.
 
 ---
 
-## 💡 **Why React+Firebase Chat?**  
-This app combines the powerful features of **React** with **Firebase’s real-time capabilities**, making it fast, secure, and scalable. Perfect for teams, social circles, or just casual chatting with friends!  
+## 🤖 **AI Boredom Group & Breakout Game**
+
+For users stuck in chat, the app introduces an interactive group chatbot named **Boredom Bot** (powered by Gemini AI):
+
+- **Trigger Condition**: When an "AI Boredom Group" is created, Boredom Bot listens to all incoming messages in the chat room.
+- **Sarcastic Roast Loop**: If the conversation becomes slow, repetitive, or boring (measured by message counts, keywords, or time delays), Boredom Bot injects sarcastic roasts or prompts the users to play a mini-game.
+- **Breakers Game**: Renders an interactive, canvas-based block-breaking game inside the chat layout.
+- **Escape Validation**: To exit the boredom group, the user must beat the Breakers Game. The score or achievement is verified by the Gemini API or client-side game logic before granting permission to leave the group.
 
 ---
 
-## ❤️ **Contribute**  
-We’d love to have you onboard! Open issues, suggest features, or submit PRs.  
+## 🖥️ **Interactive SQL Console Usage**
+
+Developers and administrators can access the console inside the client header to inspect table structures or run tests:
+
+### **Common Debugging SQL Queries**
+- **List All Users**:
+  ```sql
+  SELECT * FROM users
+  ```
+- **Inspect Cached Conversations**:
+  ```sql
+  SELECT * FROM chats
+  ```
+- **Inspect Unsynced Queue Items**:
+  ```sql
+  SELECT * FROM chats WHERE synced = false
+  ```
+- **Manually Create User Profile**:
+  ```sql
+  INSERT INTO users (id, username, email, avatar, status) VALUES ('dev_user', 'Developer Admin', 'admin@chatapp.net', './avatar2.png', 'Modifying local DB directly')
+  ```
+- **Reset Guest User Status**:
+  ```sql
+  UPDATE users SET status = 'Status updated!' WHERE id = 'guest_user'
+  ```
 
 ---
 
-### **Author**- Sukrit
+## 🛠️ **Installation & Deployment**
 
----  
+### **1. Configure Environment variables**
+Create a `.env` file in the root of the `Chat_App_React` directory:
+```env
+# Firebase Configuration
+VITE_FIREBASE_API_KEY="your-api-key"
+VITE_FIREBASE_AUTH_DOMAIN="your-auth-domain-url"
+VITE_FIREBASE_PROJECT_ID="your-project-id"
+VITE_FIREBASE_STORAGE_BUCKET="your-storage-bucket-url"
+VITE_FIREBASE_MESSAGING_SENDER_ID="your-sender-id"
+VITE_FIREBASE_APP_ID="your-app-id"
 
-Let’s connect the world, one chat at a time! ✨
+# Optional Gemini AI API Key (for Boredom Bot evaluation)
+VITE_GEMINI_API_KEY="your-gemini-api-key"
+```
+
+### **2. Setup and Execution**
+```bash
+# Install package dependencies
+npm install
+
+# Start local Vite development server
+npm run dev
+
+# Compile optimized static bundle for production
+npm run build
+
+# Run local preview server of the production build
+npm run preview
+```
+
+### **3. Production Deployment Security Rules**
+For cloud production deployments, verify the following configurations are set:
+- **CORS Allowed Origins**: Update Firebase console settings to restrict database reads to your production domain name.
+- **Firestore Security Rules**:
+  ```javascript
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /users/{userId} {
+        allow read, write: if request.auth != null;
+      }
+      match /chats/{chatId} {
+        allow read, write: if request.auth != null;
+      }
+      match /userchats/{userId} {
+        allow read, write: if request.auth != null;
+      }
+      match /stories/{storyId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+  }
+  ```
+
+---
+
+### **Author**
+* Sukrit Chopra
+
+Let's connect the world, one chat at a time! ✨

@@ -1344,7 +1344,10 @@ const Chat = () => {
       {/* ===== Header ===== */}
       <div className="wa-chat__header">
         <button className="wa-chat__back-btn" onClick={handleBack} title="Back to chats">
-          ←
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
         </button>
         <div className="wa-chat__header-user">
           <img
