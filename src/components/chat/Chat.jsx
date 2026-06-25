@@ -21,6 +21,7 @@ import { toast } from "react-toastify";
 import LoadingPopup from "./LoadingPopup";
 import { encrypt, decrypt, getChatKey } from "../../lib/encryption";
 import BreakersGame from "./BreakersGame";
+import { mysteryCases } from "../../lib/mysteryCases";
 
 const Chat = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -146,7 +147,7 @@ const Chat = () => {
   useEffect(() => {
     if (chatId && isGroup && groupInfo?.isAIBoredom && chat?.messages) {
       const systemMsgOnly = chat.messages.length === 1 && chat.messages[0].senderId === "system";
-      if (systemMsgOnly && !isRoasting) {
+      if (systemMsgOnly && !isRoasting && groupInfo?.boredomType !== "mystery") {
         setTimeout(() => {
           triggerInitialBotQuestion();
         }, 1500);
@@ -540,7 +541,11 @@ const Chat = () => {
             }, 1000);
           } else if (isGroup && groupInfo?.isAIBoredom) {
             setTimeout(() => {
-              triggerAIBoredomRoastSequence([...chats[chatIndex].messages]);
+              if (groupInfo?.boredomType === "mystery") {
+                triggerAIBoredomMysterySequence([...chats[chatIndex].messages]);
+              } else {
+                triggerAIBoredomRoastSequence([...chats[chatIndex].messages]);
+              }
             }, 1000);
           }
         }
@@ -598,7 +603,11 @@ const Chat = () => {
         const docSnap = await getDoc(doc(db, "chats", chatId));
         const currentMessages = docSnap.data()?.messages || [];
         setTimeout(() => {
-          triggerAIBoredomRoastSequence(currentMessages);
+          if (groupInfo?.boredomType === "mystery") {
+            triggerAIBoredomMysterySequence(currentMessages);
+          } else {
+            triggerAIBoredomRoastSequence(currentMessages);
+          }
         }, 1000);
       }
 
@@ -955,6 +964,117 @@ const Chat = () => {
     }
   };
 
+  const triggerAIBoredomMysterySequence = async (currentMessages) => {
+    if (!chatId || !groupInfo || isRoasting) return;
+
+    const caseIndex = groupInfo.boredomCaseIndex !== undefined ? groupInfo.boredomCaseIndex : 0;
+    const selectedCase = mysteryCases[caseIndex];
+    if (!selectedCase) return;
+
+    // Determine user's current progress: check how many clues have been decrypted in the history
+    let progress = 0;
+    const decryptedMessages = currentMessages.map(m => decrypt(m.text, getChatKey(chatId)) || "");
+    for (let i = 0; i < selectedCase.clues.length; i++) {
+      if (decryptedMessages.some(text => text.includes(selectedCase.clues[i]))) {
+        progress = i + 1;
+      }
+    }
+
+    // If already fully solved, user won! Exit out.
+    if (progress >= selectedCase.clues.length) {
+      return;
+    }
+
+    // Get the user's latest decrypted message
+    const userLastMessageObj = [...currentMessages].reverse().find(m => m.senderId === currentUser.id);
+    if (!userLastMessageObj) return;
+
+    const userMessageText = (decrypt(userLastMessageObj.text, getChatKey(chatId)) || "").toLowerCase();
+    const expectedKeyword = selectedCase.keywords[progress].toLowerCase();
+    const keywordMatches = userMessageText.includes(expectedKeyword);
+
+    // Select a random bot user to respond
+    const otherMembers = groupInfo.members.filter(mId => mId !== currentUser.id);
+    const botId = otherMembers[Math.floor(Math.random() * otherMembers.length)];
+    const botUser = groupMembers.find(m => m.id === botId) || { username: "DetectiveBot", status: "Investigating" };
+
+    setIsRoasting(true);
+    setRoastBotName(botUser.username);
+
+    // Simulate thinking delay
+    await new Promise(resolve => setTimeout(resolve, 2200));
+
+    try {
+      let replyText = "";
+      if (keywordMatches) {
+        // Correct keyword! Trigger next clue.
+        replyText = selectedCase.clues[progress];
+      } else {
+        // Incorrect: try calling Gemini to keep the roleplay/atmosphere or fallback to a hint
+        const geminiKey = import.meta.env.VITE_GEMINI_API_KEY;
+        if (geminiKey) {
+          try {
+            const prompt = `You are a helper witness or assistant in a cooperative group chat named "Mystery Case File". You are speaking as user ${botUser.username} (status: "${botUser.status || ""}"). You are investigating a murder mystery titled "${selectedCase.title}".
+            Mystery Details: "${selectedCase.intro}"
+            The clues discovered so far are:
+            ${JSON.stringify(selectedCase.clues.slice(0, progress))}
+            The player (${currentUser.username}) just asked/said: "${userMessageText}".
+            Respond in character. Do NOT give away the secret keyword "${expectedKeyword}" or solve the mystery for them. If the user is close, give a gentle hint about it. Otherwise, steer their attention back to the current clues or suggest what to look at. Keep it under 2 sentences. Speak naturally.`;
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+              })
+            });
+
+            const data = await response.json();
+            replyText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          } catch (e) {
+            console.error("Gemini failed, using fallback hint:", e);
+          }
+        }
+        
+        if (!replyText) {
+          replyText = `Hmm... that didn't reveal anything new. Hint: ${selectedCase.hints[progress]}`;
+        }
+      }
+
+      const encryptedText = encrypt(replyText, getChatKey(chatId));
+
+      if (isLocalMode) {
+        const chats = localDb._getTable("chats");
+        const chatIndex = chats.findIndex((c) => c.id === chatId);
+        if (chatIndex > -1) {
+          chats[chatIndex].messages.push({
+            senderId: botId,
+            text: encryptedText,
+            createdAt: new Date().toISOString(),
+            seen: true
+          });
+          localDb._setTable("chats", chats);
+          updateUserChatsSummary(replyText);
+        }
+      } else {
+        await updateDoc(doc(db, "chats", chatId), {
+          messages: arrayUnion({
+            senderId: botId,
+            text: encryptedText,
+            createdAt: new Date(),
+            seen: true
+          })
+        });
+        await updateUserChatsSummary(replyText);
+      }
+    } catch (err) {
+      console.error("Mystery loop error:", err);
+    } finally {
+      setIsRoasting(false);
+      setRoastBotName("");
+    }
+  };
+
   const triggerAIBoredomRoastSequence = async (currentMessages) => {
     if (!chatId || !groupInfo || isRoasting) return;
 
@@ -1058,6 +1178,31 @@ const Chat = () => {
     setShowVictoryModal(true);
     setVictoryFeedback("");
     setVictoryEvaluationResult(null);
+
+    // Intercept if this is a mystery text game
+    if (groupInfo?.boredomType === "mystery") {
+      const caseIndex = groupInfo.boredomCaseIndex !== undefined ? groupInfo.boredomCaseIndex : 0;
+      const selectedCase = mysteryCases[caseIndex];
+      if (selectedCase) {
+        let progress = 0;
+        const decryptedMessages = chat.messages.map(m => decrypt(m.text, getChatKey(chatId)) || "");
+        for (let i = 0; i < selectedCase.clues.length; i++) {
+          if (decryptedMessages.some(text => text.includes(selectedCase.clues[i]))) {
+            progress = i + 1;
+          }
+        }
+
+        const won = progress >= selectedCase.clues.length;
+        setVictoryEvaluationResult(won ? "won" : "lost");
+        setVictoryFeedback(
+          won 
+            ? `Congratulations! You successfully uncovered all clues and solved "${selectedCase.title}" by identifying the culprit: ${selectedCase.answer.toUpperCase()}. Excellent detective work!` 
+            : `You have not solved the case yet. You need to ask more questions and find the secret keywords to uncover clues! (Currently at clue ${progress}/${selectedCase.clues.length})`
+        );
+        setEvaluatingVictory(false);
+        return;
+      }
+    }
 
     try {
       const historyText = chat.messages.map(msg => {
@@ -1296,7 +1441,10 @@ const Chat = () => {
 
   const handleBack = () => {
     if (isGroup && groupInfo?.isAIBoredom) {
-      toast.warn("😈 You cannot leave the Boredom Zone so easily! Click 'End Chat Game' to escape.");
+      toast.warn(groupInfo?.boredomType === "mystery" 
+        ? "🔎 You cannot leave the Mystery Room so easily! Solve the mystery or play Breakers to escape."
+        : "😈 You cannot leave the Boredom Zone so easily! Click 'End Chat Game' to escape."
+      );
       return;
     }
     resetChat();
@@ -1714,21 +1862,23 @@ const Chat = () => {
       {showVictoryModal && (
         <div className="wa-chat__modal-overlay">
           <div className="wa-chat__modal wa-chat__modal--boredom">
-            <h3 className="wa-chat__modal-title">Escape AI Boredom Zone</h3>
+            <h3 className="wa-chat__modal-title">{groupInfo?.boredomType === "mystery" ? "Escape Mystery Room" : "Escape AI Boredom Zone"}</h3>
             
             {evaluatingVictory ? (
               <div className="wa-chat__modal-evaluating">
                 <div className="wa-chat__spinner"></div>
-                <p>Analyzing conversation roast balance via Gemini AI...</p>
+                <p>{groupInfo?.boredomType === "mystery" ? "Verifying case clues..." : "Analyzing conversation roast balance via Gemini AI..."}</p>
               </div>
             ) : victoryEvaluationResult === null ? (
               <>
                 <p className="wa-chat__modal-text">
-                  Choose how you want to exit. You can claim victory (and let Gemini decide if you roasted them back successfully) or admit defeat immediately (which triggers the Breakers brick game).
+                  {groupInfo?.boredomType === "mystery" 
+                    ? "Choose how you want to exit. You can claim victory (and see if you successfully solved the mystery case) or admit defeat immediately (which triggers the Breakers brick game)."
+                    : "Choose how you want to exit. You can claim victory (and let Gemini decide if you roasted them back successfully) or admit defeat immediately (which triggers the Breakers brick game)."}
                 </p>
                 <div className="wa-chat__modal-actions wa-chat__modal-actions--column">
                   <button className="wa-chat__modal-btn wa-chat__modal-btn--victory" onClick={handleEvaluateVictory}>
-                    🏆 Claim Victory (AI Evaluation)
+                    {groupInfo?.boredomType === "mystery" ? "🏆 Claim Victory (Check Case)" : "🏆 Claim Victory (AI Evaluation)"}
                   </button>
                   <button className="wa-chat__modal-btn wa-chat__modal-btn--defeat" onClick={() => { setShowVictoryModal(false); setShowGame(true); }}>
                     🏳️ Admit Defeat (Play Breakers)
@@ -1741,21 +1891,27 @@ const Chat = () => {
             ) : victoryEvaluationResult === "won" ? (
               <>
                 <div className="wa-chat__modal-result-icon">🏆</div>
-                <h4 className="wa-chat__modal-subtitle" style={{ color: "#10b981" }}>Gemini Declared You Winner!</h4>
+                <h4 className="wa-chat__modal-subtitle" style={{ color: "#10b981" }}>
+                  {groupInfo?.boredomType === "mystery" ? "Case Solved Successfully!" : "Gemini Declared You Winner!"}
+                </h4>
                 <p className="wa-chat__modal-feedback">"{victoryFeedback}"</p>
                 <div className="wa-chat__modal-actions">
                   <button className="wa-chat__modal-btn wa-chat__modal-btn--exit-group" onClick={handleEscapeSuccess}>
-                    Kick Everyone Out & Exit
+                    Close Case & Exit
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <div className="wa-chat__modal-result-icon">💀</div>
-                <h4 className="wa-chat__modal-subtitle" style={{ color: "#ef4444" }}>You got roasted into oblivion!</h4>
+                <div className="wa-chat__modal-result-icon">{groupInfo?.boredomType === "mystery" ? "🔎" : "💀"}</div>
+                <h4 className="wa-chat__modal-subtitle" style={{ color: "#ef4444" }}>
+                  {groupInfo?.boredomType === "mystery" ? "Case Unsolved!" : "You got roasted into oblivion!"}
+                </h4>
                 <p className="wa-chat__modal-feedback">"{victoryFeedback}"</p>
                 <p className="wa-chat__modal-text" style={{ fontSize: "12px", marginTop: "8px" }}>
-                  Gemini decided your roasts were too weak. To escape, you must now play the Breakers brick game!
+                  {groupInfo?.boredomType === "mystery" 
+                    ? "You haven't uncovered all the clues yet. To escape, you must now play the Breakers brick game!"
+                    : "Gemini decided your roasts were too weak. To escape, you must now play the Breakers brick game!"}
                 </p>
                 <div className="wa-chat__modal-actions">
                   <button className="wa-chat__modal-btn wa-chat__modal-btn--defeat" onClick={() => { setShowVictoryModal(false); setShowGame(true); }}>

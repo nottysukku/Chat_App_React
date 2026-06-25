@@ -44,7 +44,10 @@ const ChatList = () => {
               avatar: item.groupAvatar || "./avatar2.png",
               isGroup: true,
               members: item.members,
-              blocked: []
+              blocked: [],
+              isAIBoredom: item.isAIBoredom || false,
+              boredomType: item.boredomType || null,
+              boredomCaseIndex: item.boredomCaseIndex !== undefined ? item.boredomCaseIndex : null
             };
             return { ...item, user: group };
           }
@@ -76,7 +79,10 @@ const ChatList = () => {
               avatar: item.groupAvatar || "./avatar2.png",
               isGroup: true,
               members: item.members,
-              blocked: []
+              blocked: [],
+              isAIBoredom: item.isAIBoredom || false,
+              boredomType: item.boredomType || null,
+              boredomCaseIndex: item.boredomCaseIndex !== undefined ? item.boredomCaseIndex : null
             };
             return { ...item, user: group };
           }
@@ -122,7 +128,10 @@ const ChatList = () => {
           isGroup: chat.isGroup || false,
           groupName: chat.groupName || null,
           groupAvatar: chat.groupAvatar || null,
-          members: chat.members || null
+          members: chat.members || null,
+          isAIBoredom: chat.isAIBoredom || false,
+          boredomType: chat.boredomType || null,
+          boredomCaseIndex: chat.boredomCaseIndex !== undefined ? chat.boredomCaseIndex : null
         }));
         localDb.updateUserChats(currentUser.id, cachedUserchats);
 
@@ -137,7 +146,10 @@ const ChatList = () => {
 
   const handleSelect = async (chat) => {
     if (activeIsGroup && activeGroupInfo?.isAIBoredom && activeChatId !== chat.chatId) {
-      toast.warn("😈 You cannot flee the Boredom Zone! Escape the roast battle first.");
+      toast.warn(activeGroupInfo?.boredomType === "mystery"
+        ? "🔎 You cannot leave the Mystery Room! Solve the mystery first."
+        : "😈 You cannot flee the Boredom Zone! Escape the roast battle first."
+      );
       return;
     }
 

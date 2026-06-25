@@ -470,3 +470,56 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Game mode selection in Warning Modal */
+.wa-group-drawer__game-select {
+  margin: 16px 0;
+  text-align: left;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wa-group-drawer__game-select-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wa-group-drawer__game-options {
+  display: flex;
+  gap: 8px;
+}
+
+.wa-group-drawer__game-option {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12.5px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.wa-group-drawer__game-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.wa-group-drawer__game-option--active {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #ef4444 !important;
+  color: #fca5a5 !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}

@@ -7,6 +7,7 @@ import upload from "../../../lib/upload";
 import { toast } from "react-toastify";
 import "./createGroup.css";
 import { encrypt, getChatKey } from "../../../lib/encryption";
+import { mysteryCases } from "../../../lib/mysteryCases";
 
 const CreateGroup = ({ isOpen, onClose }) => {
   const { currentUser, isLocalMode } = useUserStore();
@@ -18,6 +19,7 @@ const CreateGroup = ({ isOpen, onClose }) => {
   const [avatar, setAvatar] = useState({ file: null, url: "" });
   const [loading, setLoading] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
+  const [boredomType, setBoredomType] = useState("roast");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -70,8 +72,12 @@ const CreateGroup = ({ isOpen, onClose }) => {
     setShowWarning(false);
     try {
       setLoading(true);
-      const groupName = "AI Boredom Zone 🤖💥";
+      const isMystery = boredomType === "mystery";
+      const groupName = isMystery ? "Mystery Case File 🔎" : "AI Boredom Zone 🤖💥";
       const groupAvatarUrl = "./avatar2.png";
+
+      const caseIndex = Math.floor(Math.random() * mysteryCases.length);
+      const selectedCase = mysteryCases[caseIndex];
 
       let membersList = [];
       if (isLocalMode) {
@@ -94,7 +100,10 @@ const CreateGroup = ({ isOpen, onClose }) => {
         const localChatId = "group_chat_boredom_" + Date.now();
         const localChats = JSON.parse(localStorage.getItem("sqlite_chats") || "[]");
         const groupKey = getChatKey(localChatId);
-        const encryptedText = encrypt(`Welcome to the AI Boredom Zone! Prepare to be roasted.`, groupKey);
+        const welcomeText = isMystery 
+          ? `🔎 MYSTERY CASE: ${selectedCase.title}\n\n${selectedCase.intro}` 
+          : `Welcome to the AI Boredom Zone! Prepare to be roasted.`;
+        const encryptedText = encrypt(welcomeText, groupKey);
 
         const initialMsg = {
           senderId: "system",
@@ -110,36 +119,40 @@ const CreateGroup = ({ isOpen, onClose }) => {
           groupAvatar: groupAvatarUrl,
           members: [currentUser.id, ...membersList],
           messages: [initialMsg],
-          isAIBoredom: true
+          isAIBoredom: true,
+          boredomType,
+          boredomCaseIndex: caseIndex
         });
         localStorage.setItem("sqlite_chats", JSON.stringify(localChats));
 
-        const allMemberIds = [currentUser.id, ...membersList];
         const userchats = JSON.parse(localStorage.getItem("sqlite_userchats") || "{}");
-        allMemberIds.forEach(memberId => {
-          if (!userchats[memberId]) userchats[memberId] = { chats: [] };
-          userchats[memberId].chats.push({
-            chatId: localChatId,
-            isGroup: true,
-            groupName,
-            groupAvatar: groupAvatarUrl,
-            lastMessage: encryptedText,
-            isSeen: memberId === currentUser.id,
-            updatedAt: Date.now(),
-            isAIBoredom: true
-          });
+        const memberId = currentUser.id;
+        if (!userchats[memberId]) userchats[memberId] = { chats: [] };
+        userchats[memberId].chats.push({
+          chatId: localChatId,
+          isGroup: true,
+          groupName,
+          groupAvatar: groupAvatarUrl,
+          lastMessage: encryptedText,
+          isSeen: true,
+          updatedAt: Date.now(),
+          isAIBoredom: true,
+          boredomType,
+          boredomCaseIndex: caseIndex
         });
         localStorage.setItem("sqlite_userchats", JSON.stringify(userchats));
         window.dispatchEvent(new CustomEvent("local-db-update"));
 
-        toast.success("Entered the AI Boredom Zone!");
+        toast.success(isMystery ? "Entered the Murder Mystery Room!" : "Entered the AI Boredom Zone!");
         
         const groupObj = {
           id: localChatId,
           groupName,
           groupAvatar: groupAvatarUrl,
-          members: allMemberIds,
-          isAIBoredom: true
+          members: [currentUser.id, ...membersList],
+          isAIBoredom: true,
+          boredomType,
+          boredomCaseIndex: caseIndex
         };
         changeChat(localChatId, groupObj, true);
         onClose();
@@ -151,7 +164,10 @@ const CreateGroup = ({ isOpen, onClose }) => {
       const newChatDocRef = doc(chatRef);
       const newChatId = newChatDocRef.id;
       const groupKey = getChatKey(newChatId);
-      const encryptedText = encrypt(`Welcome to the AI Boredom Zone! Prepare to be roasted.`, groupKey);
+      const welcomeText = isMystery 
+        ? `🔎 MYSTERY CASE: ${selectedCase.title}\n\n${selectedCase.intro}` 
+        : `Welcome to the AI Boredom Zone! Prepare to be roasted.`;
+      const encryptedText = encrypt(welcomeText, groupKey);
 
       await setDoc(newChatDocRef, {
         createdAt: Date.now(),
@@ -166,33 +182,36 @@ const CreateGroup = ({ isOpen, onClose }) => {
             createdAt: Date.now()
           }
         ],
-        isAIBoredom: true
+        isAIBoredom: true,
+        boredomType,
+        boredomCaseIndex: caseIndex
       });
 
-      const allMemberIds = [currentUser.id, ...membersList];
-      for (const memberId of allMemberIds) {
-        const userChatsRef = doc(db, "userchats", memberId);
-        await updateDoc(userChatsRef, {
-          chats: arrayUnion({
-            chatId: newChatId,
-            isGroup: true,
-            groupName,
-            groupAvatar: groupAvatarUrl,
-            lastMessage: encryptedText,
-            isSeen: memberId === currentUser.id,
-            updatedAt: Date.now(),
-            isAIBoredom: true
-          })
-        });
-      }
+      const userChatsRef = doc(db, "userchats", currentUser.id);
+      await updateDoc(userChatsRef, {
+        chats: arrayUnion({
+          chatId: newChatId,
+          isGroup: true,
+          groupName,
+          groupAvatar: groupAvatarUrl,
+          lastMessage: encryptedText,
+          isSeen: true,
+          updatedAt: Date.now(),
+          isAIBoredom: true,
+          boredomType,
+          boredomCaseIndex: caseIndex
+        })
+      });
 
-      toast.success("Entered the AI Boredom Zone!");
+      toast.success(isMystery ? "Entered the Murder Mystery Room!" : "Entered the AI Boredom Zone!");
       const groupObj = {
         id: newChatId,
         groupName,
         groupAvatar: groupAvatarUrl,
-        members: allMemberIds,
-        isAIBoredom: true
+        members: [currentUser.id, ...membersList],
+        isAIBoredom: true,
+        boredomType,
+        boredomCaseIndex: caseIndex
       };
       changeChat(newChatId, groupObj, true);
       onClose();
@@ -490,12 +509,47 @@ const CreateGroup = ({ isOpen, onClose }) => {
           <div className="wa-group-drawer__warning-modal">
             <div className="wa-group-drawer__warning-icon">⚠️</div>
             <h3 className="wa-group-drawer__warning-title">AI BOREDOM ZONE WARNING</h3>
-            <p className="wa-group-drawer__warning-text">
-              You are about to enter a highly roasted chat zone! All other members will be AI bots simulating your contacts.
-            </p>
-            <p className="wa-group-drawer__warning-text">
-              They will troll and mock you based on your responses. <strong>You cannot leave this group</strong> unless you either win the roast battle (evaluated by AI) or beat the Breakout game to escape.
-            </p>
+            
+            <div className="wa-group-drawer__game-select">
+              <span className="wa-group-drawer__game-select-label">Choose Game Type:</span>
+              <div className="wa-group-drawer__game-options">
+                <button
+                  type="button"
+                  className={`wa-group-drawer__game-option ${boredomType === "roast" ? "wa-group-drawer__game-option--active" : ""}`}
+                  onClick={() => setBoredomType("roast")}
+                >
+                  🔥 Roast Battle
+                </button>
+                <button
+                  type="button"
+                  className={`wa-group-drawer__game-option ${boredomType === "mystery" ? "wa-group-drawer__game-option--active" : ""}`}
+                  onClick={() => setBoredomType("mystery")}
+                >
+                  🔎 Text Mystery
+                </button>
+              </div>
+            </div>
+
+            {boredomType === "roast" ? (
+              <>
+                <p className="wa-group-drawer__warning-text">
+                  You are about to enter a highly roasted chat zone! All other members will be AI bots simulating your contacts.
+                </p>
+                <p className="wa-group-drawer__warning-text">
+                  They will troll and mock you based on your responses. <strong>You cannot leave this group</strong> unless you either win the roast battle (evaluated by AI) or beat the Breakout game to escape.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="wa-group-drawer__warning-text">
+                  You are about to enter a Text Mystery Room! You will need to ask questions to solve a randomly chosen murder mystery case.
+                </p>
+                <p className="wa-group-drawer__warning-text">
+                  The bots will respond with clues when you uncover specific case words (case-insensitive). <strong>You cannot leave this group</strong> until you solve the mystery or beat the Breakout game to escape.
+                </p>
+              </>
+            )}
+
             <p className="wa-group-drawer__warning-text wa-group-drawer__warning-highlight">
               Do you dare to proceed?
             </p>
