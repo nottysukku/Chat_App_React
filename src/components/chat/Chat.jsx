@@ -62,6 +62,8 @@ const Chat = () => {
   const [activeCallIsHost, setActiveCallIsHost] = useState(false);
   const [activeCallIsVideo, setActiveCallIsVideo] = useState(true);
   const [onlineStatus, setOnlineStatus] = useState(navigator.onLine);
+  const [showMoreActions, setShowMoreActions] = useState(false);
+  const actionMenuRef = useRef(null);
 
   const updateUserChatsSummary = async (lastMsgText) => {
     const userIDs = isGroup ? (groupInfo?.members || []) : [currentUser.id, user.id];
@@ -137,6 +139,18 @@ const Chat = () => {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target)) {
+        setShowMoreActions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -1700,26 +1714,41 @@ const Chat = () => {
 
       {/* ===== Input Area ===== */}
       <div className="wa-chat__input">
-        <div className="wa-chat__input-icons">
-          <label htmlFor="file" className="wa-chat__icon-btn" title="Send image">
-            <img src="./img.png" alt="Image" />
-          </label>
-          <input
-            type="file"
-            id="file"
-            style={{ display: "none" }}
-            onChange={handleImg}
-          />
-          <button className="wa-chat__icon-btn" onClick={handleAttach} title="Attach file">
-            <img src="./attach.png" alt="Attach" />
-          </button>
+        <div ref={actionMenuRef} className={`wa-chat__input-icons ${showMoreActions ? "wa-chat__input-icons--expanded" : ""}`}>
           <button
-            className={`wa-chat__icon-btn ${isRecording ? "wa-chat__icon-btn--recording" : ""}`}
-            onClick={isRecording ? stopRecording : startRecording}
-            title={isRecording ? "Stop recording" : "Record audio"}
+            className="wa-chat__icon-btn wa-chat__toggle-actions-btn"
+            onClick={() => setShowMoreActions((prev) => !prev)}
+            title="More actions"
           >
-            <img src="./mic.png" alt="Mic" />
+            <span style={{
+              fontSize: "24px",
+              lineHeight: 1,
+              transition: "transform var(--transition-fast)",
+              transform: showMoreActions ? "rotate(45deg)" : "rotate(0deg)",
+              display: "inline-block"
+            }}>+</span>
           </button>
+          <div className="wa-chat__action-buttons">
+            <label htmlFor="file" className="wa-chat__icon-btn" title="Send image">
+              <img src="./img.png" alt="Image" />
+            </label>
+            <input
+              type="file"
+              id="file"
+              style={{ display: "none" }}
+              onChange={handleImg}
+            />
+            <button className="wa-chat__icon-btn" onClick={handleAttach} title="Attach file">
+              <img src="./attach.png" alt="Attach" />
+            </button>
+            <button
+              className={`wa-chat__icon-btn ${isRecording ? "wa-chat__icon-btn--recording" : ""}`}
+              onClick={isRecording ? stopRecording : startRecording}
+              title={isRecording ? "Stop recording" : "Record audio"}
+            >
+              <img src="./mic.png" alt="Mic" />
+            </button>
+          </div>
         </div>
 
         <input
@@ -1742,7 +1771,7 @@ const Chat = () => {
         />
 
         <div className="wa-chat__emoji">
-          <button className="wa-chat__icon-btn" onClick={() => setOpen((prev) => !prev)}>
+          <button className="wa-chat__icon-btn wa-chat__emoji-btn" onClick={() => setOpen((prev) => !prev)}>
             <img src="./emoji.png" alt="Emoji" />
           </button>
           <div className="wa-chat__emoji-picker">

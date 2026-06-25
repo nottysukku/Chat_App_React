@@ -12,7 +12,7 @@ import './index.css';
 
 const App = () => {
   const { currentUser, isLoading, fetchUserInfo, updateUserOnlineStatus, isLocalMode } = useUserStore();
-  const { chatId } = useChatStore();
+  const { chatId, isChatsLoaded } = useChatStore();
 
   useEffect(() => {
     // Apply saved theme on mount
@@ -68,6 +68,8 @@ const App = () => {
     );
   }
 
+  const showLoaderOverlay = currentUser && !isChatsLoaded;
+
   return (
     <div className="app">
       <main className="main-container">
@@ -94,6 +96,22 @@ const App = () => {
         )}
         <Notification />
       </main>
+
+      {showLoaderOverlay && (
+        <div className="loading-container" style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 99999,
+          background: 'var(--bg-chat)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div className="loading-spinner"></div>
+          <div className="loading">Loading Chats...</div>
+        </div>
+      )}
     </div>
   );
 };

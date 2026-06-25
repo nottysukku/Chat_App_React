@@ -250,10 +250,23 @@ html.light .wa-chat__icon-btn img {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.wa-chat__toggle-actions-btn {
+  display: none !important;
+}
+
+.wa-chat__action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .wa-chat__text-input {
   flex: 1;
+  min-width: 0;
   height: 42px;
   background-color: var(--bg-input);
   border: none;
@@ -271,6 +284,7 @@ html.light .wa-chat__icon-btn img {
 
 .wa-chat__emoji {
   position: relative;
+  flex-shrink: 0;
 }
 
 .wa-chat__emoji-picker {
@@ -307,6 +321,7 @@ html.light .wa-chat__icon-btn img {
   align-items: center;
   justify-content: center;
   transition: background-color var(--transition-fast), transform var(--transition-fast);
+  flex-shrink: 0;
 }
 
 .wa-chat__send-btn:hover:not(:disabled) {
@@ -540,15 +555,61 @@ html.light .wa-chat__icon-btn img {
   }
   .wa-chat__input-icons {
     gap: 8px !important;
+    flex-shrink: 0 !important;
+  }
+  .wa-chat__toggle-actions-btn {
+    display: flex !important;
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 24px;
+    transition: transform var(--transition-fast), background-color var(--transition-fast);
+    flex-shrink: 0 !important;
+  }
+  .wa-chat__toggle-actions-btn:hover {
+    background-color: var(--bg-hover);
+  }
+  .wa-chat__action-buttons {
+    display: none;
+    position: absolute;
+    bottom: 56px;
+    left: 8px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 8px;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    animation: wa-scaleIn 180ms ease-out;
+  }
+  .wa-chat__input-icons--expanded .wa-chat__action-buttons {
+    display: flex !important;
   }
   .wa-chat__text-input {
     height: 36px !important;
     padding: 8px 12px !important;
     font-size: 16px !important;
+    min-width: 0 !important;
+  }
+  .wa-chat__emoji {
+    flex-shrink: 0 !important;
+  }
+  .wa-chat__emoji-btn {
+    flex-shrink: 0 !important;
   }
   .wa-chat__send-btn {
     width: 36px !important;
     height: 36px !important;
+    flex-shrink: 0 !important;
   }
 }
 
@@ -855,25 +916,43 @@ html.light .wa-chat__icon-btn img {
   }
   .wa-chat__input-icons {
     gap: 4px !important;
+    flex-shrink: 0 !important;
   }
-  .wa-chat__input-icons label,
-  .wa-chat__input-icons button {
+  .wa-chat__toggle-actions-btn {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 20px !important;
+  }
+  .wa-chat__action-buttons {
+    bottom: 50px !important;
+    left: 4px !important;
+    padding: 6px !important;
+    gap: 6px !important;
+  }
+  .wa-chat__action-buttons label,
+  .wa-chat__action-buttons button {
     padding: 4px !important;
   }
-  .wa-chat__input-icons img {
-    width: 20px !important;
-    height: 20px !important;
+  .wa-chat__action-buttons img {
+    width: 18px !important;
+    height: 18px !important;
   }
   .wa-chat__text-input {
     padding: 6px 8px !important;
     font-size: 16px !important;
+    min-width: 0 !important;
+  }
+  .wa-chat__emoji {
+    flex-shrink: 0 !important;
   }
   .wa-chat__emoji-btn {
     width: 28px !important;
     height: 28px !important;
+    flex-shrink: 0 !important;
   }
   .wa-chat__send-btn {
     width: 32px !important;
     height: 32px !important;
+    flex-shrink: 0 !important;
   }
 }

@@ -9,6 +9,8 @@ export const useChatStore = create((set) => ({
   userStatus: null,  // Track user status here
   isCurrentUserBlocked: false,
   isReceiverBlocked: false,
+  isChatsLoaded: false,
+  setChatsLoaded: (loaded) => set({ isChatsLoaded: loaded }),
 
   // Change chat and user details, including status and group support
   changeChat: (chatId, info, isGroupChat = false) => {
@@ -82,6 +84,7 @@ export const useChatStore = create((set) => ({
       userStatus: null,  // Reset status on chat reset
       isCurrentUserBlocked: false,
       isReceiverBlocked: false,
+      isChatsLoaded: false,
     });
   },
 }));

@@ -18,7 +18,7 @@ const ChatList = () => {
   const [onlineStatus, setOnlineStatus] = useState(navigator.onLine);
 
   const { currentUser, isLocalMode } = useUserStore();
-  const { changeChat, chatId: activeChatId, isGroup: activeIsGroup, groupInfo: activeGroupInfo } = useChatStore();
+  const { changeChat, chatId: activeChatId, isGroup: activeIsGroup, groupInfo: activeGroupInfo, setChatsLoaded } = useChatStore();
 
   useEffect(() => {
     const handleOnline = () => setOnlineStatus(true);
@@ -57,6 +57,7 @@ const ChatList = () => {
         });
         const chatData = await Promise.all(promises);
         setChats(chatData.sort((a, b) => b.updatedAt - a.updatedAt));
+        setChatsLoaded(true);
       };
 
       fetchLocalChats();
@@ -136,6 +137,7 @@ const ChatList = () => {
         localDb.updateUserChats(currentUser.id, cachedUserchats);
 
         setChats(chatData.sort((a, b) => b.updatedAt - a.updatedAt));
+        setChatsLoaded(true);
       }
     );
 
